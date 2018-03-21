@@ -1,0 +1,17 @@
+```{r setup,eval=TRUE,echo=FALSE}
+if (!exists("indent")) {
+	indent <- '#' # ugly hack
+}
+if (exists("testing")) {
+	results <- data.frame()
+	metadata_table = data.frame()
+}
+```
+
+`r indent`# Codebook table
+
+```{r items, message=TRUE}
+metadata_table <- dplyr::mutate(metadata_table, 
+                name = paste0('<a href="#', .data$name, '">', .data$name, '</a>'))
+export_table(metadata_table)
+```
