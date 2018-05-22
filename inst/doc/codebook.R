@@ -46,13 +46,15 @@ if (!exists("indent")) {
 	indent <- '#'
 }
 if (exists("testing")) {
+  scale_name <- safe_name <- "bla"
 	scale <- 1:10
 	reliabilities <- list()
 	items <- list()
 	scale_info <- list(scale_item_names = c("item1", "item2", "item3R"))
 }
-
-scale_info <- attributes(scale)
+html_scale_name <- recursive_escape(scale_name)
+names(items) <- recursive_escape(names(items))
+scale_info <- recursive_escape(attributes(scale))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -75,12 +77,15 @@ if (!is.null(x$total$ase)) {
 pander::pander(x$total)
 
 ## ------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
 pander::pander(x$alpha.drop)
 
 ## ------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
 pander::pander(x$item.stats)
 
 ## ------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
 pander::pander(x$response.freq)
 
 ## ----reliability, results='asis'-----------------------------------------
@@ -116,16 +121,21 @@ dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 choices <- attributes(items[[1]])$item$choices
 breaks <- as.numeric(names(choices))
 if (length(breaks)) {
+  suppressMessages( # ignore message about overwriting x axis
   dist_plot <- dist_plot +
-    	ggplot2::scale_x_continuous("Choices", 
+    	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15), 
-	                            limits = range(breaks))
+	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+      ggplot2::expand_limits(x = range(breaks)))
+  
 }
 
 dist_plot
 
 ## ----summary-------------------------------------------------------------
+for (i in seq_along(names(items))) {
+  attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
+}
 pander::pander(codebook_table(items))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -133,13 +143,15 @@ if (!exists("indent")) {
 	indent <- '#'
 }
 if (exists("testing")) {
+  scale_name <- safe_name <- "bla"
 	scale <- 1:10
 	reliabilities <- list()
 	items <- list()
 	scale_info <- list(scale_item_names = c("item1", "item2", "item3R"))
 }
-
-scale_info <- attributes(scale)
+html_scale_name <- recursive_escape(scale_name)
+names(items) <- recursive_escape(names(items))
+scale_info <- recursive_escape(attributes(scale))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -162,12 +174,15 @@ if (!is.null(x$total$ase)) {
 pander::pander(x$total)
 
 ## ------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
 pander::pander(x$alpha.drop)
 
 ## ------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
 pander::pander(x$item.stats)
 
 ## ------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
 pander::pander(x$response.freq)
 
 ## ----reliability, results='asis'-----------------------------------------
@@ -203,16 +218,21 @@ dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 choices <- attributes(items[[1]])$item$choices
 breaks <- as.numeric(names(choices))
 if (length(breaks)) {
+  suppressMessages( # ignore message about overwriting x axis
   dist_plot <- dist_plot +
-    	ggplot2::scale_x_continuous("Choices", 
+    	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15), 
-	                            limits = range(breaks))
+	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+      ggplot2::expand_limits(x = range(breaks)))
+  
 }
 
 dist_plot
 
 ## ----summary-------------------------------------------------------------
+for (i in seq_along(names(items))) {
+  attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
+}
 pander::pander(codebook_table(items))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -220,13 +240,15 @@ if (!exists("indent")) {
 	indent <- '#'
 }
 if (exists("testing")) {
+  scale_name <- safe_name <- "bla"
 	scale <- 1:10
 	reliabilities <- list()
 	items <- list()
 	scale_info <- list(scale_item_names = c("item1", "item2", "item3R"))
 }
-
-scale_info <- attributes(scale)
+html_scale_name <- recursive_escape(scale_name)
+names(items) <- recursive_escape(names(items))
+scale_info <- recursive_escape(attributes(scale))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -249,12 +271,15 @@ if (!is.null(x$total$ase)) {
 pander::pander(x$total)
 
 ## ------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
 pander::pander(x$alpha.drop)
 
 ## ------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
 pander::pander(x$item.stats)
 
 ## ------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
 pander::pander(x$response.freq)
 
 ## ----reliability, results='asis'-----------------------------------------
@@ -290,16 +315,21 @@ dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 choices <- attributes(items[[1]])$item$choices
 breaks <- as.numeric(names(choices))
 if (length(breaks)) {
+  suppressMessages( # ignore message about overwriting x axis
   dist_plot <- dist_plot +
-    	ggplot2::scale_x_continuous("Choices", 
+    	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15), 
-	                            limits = range(breaks))
+	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+      ggplot2::expand_limits(x = range(breaks)))
+  
 }
 
 dist_plot
 
 ## ----summary-------------------------------------------------------------
+for (i in seq_along(names(items))) {
+  attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
+}
 pander::pander(codebook_table(items))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -307,13 +337,15 @@ if (!exists("indent")) {
 	indent <- '#'
 }
 if (exists("testing")) {
+  scale_name <- safe_name <- "bla"
 	scale <- 1:10
 	reliabilities <- list()
 	items <- list()
 	scale_info <- list(scale_item_names = c("item1", "item2", "item3R"))
 }
-
-scale_info <- attributes(scale)
+html_scale_name <- recursive_escape(scale_name)
+names(items) <- recursive_escape(names(items))
+scale_info <- recursive_escape(attributes(scale))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -336,12 +368,15 @@ if (!is.null(x$total$ase)) {
 pander::pander(x$total)
 
 ## ------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
 pander::pander(x$alpha.drop)
 
 ## ------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
 pander::pander(x$item.stats)
 
 ## ------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
 pander::pander(x$response.freq)
 
 ## ----reliability, results='asis'-----------------------------------------
@@ -377,16 +412,21 @@ dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 choices <- attributes(items[[1]])$item$choices
 breaks <- as.numeric(names(choices))
 if (length(breaks)) {
+  suppressMessages( # ignore message about overwriting x axis
   dist_plot <- dist_plot +
-    	ggplot2::scale_x_continuous("Choices", 
+    	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15), 
-	                            limits = range(breaks))
+	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+      ggplot2::expand_limits(x = range(breaks)))
+  
 }
 
 dist_plot
 
 ## ----summary-------------------------------------------------------------
+for (i in seq_along(names(items))) {
+  attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
+}
 pander::pander(codebook_table(items))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -394,13 +434,15 @@ if (!exists("indent")) {
 	indent <- '#'
 }
 if (exists("testing")) {
+  scale_name <- safe_name <- "bla"
 	scale <- 1:10
 	reliabilities <- list()
 	items <- list()
 	scale_info <- list(scale_item_names = c("item1", "item2", "item3R"))
 }
-
-scale_info <- attributes(scale)
+html_scale_name <- recursive_escape(scale_name)
+names(items) <- recursive_escape(names(items))
+scale_info <- recursive_escape(attributes(scale))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -423,12 +465,15 @@ if (!is.null(x$total$ase)) {
 pander::pander(x$total)
 
 ## ------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
 pander::pander(x$alpha.drop)
 
 ## ------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
 pander::pander(x$item.stats)
 
 ## ------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
 pander::pander(x$response.freq)
 
 ## ----reliability, results='asis'-----------------------------------------
@@ -464,16 +509,21 @@ dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 choices <- attributes(items[[1]])$item$choices
 breaks <- as.numeric(names(choices))
 if (length(breaks)) {
+  suppressMessages( # ignore message about overwriting x axis
   dist_plot <- dist_plot +
-    	ggplot2::scale_x_continuous("Choices", 
+    	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15), 
-	                            limits = range(breaks))
+	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+      ggplot2::expand_limits(x = range(breaks)))
+  
 }
 
 dist_plot
 
 ## ----summary-------------------------------------------------------------
+for (i in seq_along(names(items))) {
+  attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
+}
 pander::pander(codebook_table(items))
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -482,10 +532,12 @@ if (!exists("indent")) {
 }
 if (exists("testing")) {
 	item <- 1:10
-	item_name <- "yay"
+	item_name <- safe_name <- "yay"
 	attributes(item) <- list(label = 'yayya')
 }
-item_attributes <- attributes(item)
+
+item_attributes <- recursive_escape(attributes(item))
+html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
 item_info <- item_attributes$item
@@ -495,27 +547,44 @@ choices <- item_attributes$labels
 show_missings <- FALSE
 if (haven::is.labelled(item)) {
   missings <- item[is.na(haven::zap_missing(item))]
+  attributes(missings) <- attributes(item)
+  if (!is.null(attributes(item)$labels)) {
+    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
+  }
   if (is.numeric(item)) {
     show_missings <- length(unique(haven::na_tag(missings))) > 1
     item <- haven::zap_missing(item)
   }
-  if (length(attributes(item)$labels) == 0 && is.numeric(item)) {
+  if (length(item_attributes$labels) == 0 && is.numeric(item)) {
     item <- haven::zap_labels(item)
   }
 }
+item_nomiss <- item[!is.na(item)]
+
+# unnest mc_multiple and so on
+if (
+  is.character(item_nomiss) &&
+  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  (exists("type", item_info) && 
+    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+  ) {
+  item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
+}
+attributes(item_nomiss) <- attributes(item)
+
 old_height <- knitr::opts_chunk$get("fig.height")
-non_missing_choices <- attributes(item)[["labels"]]
+non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item) || many_labels
+go_vertical <- !is.numeric(item_nomiss) || many_labels
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
 
 	if (is.null(choices) || 
-	    dplyr::n_distinct(na.omit(item)) > length(non_missing_choices)) {
-		choices <- unique(na.omit(item))
-		names(choices) <- choices
-		non_missing_choices <- choices
+	    dplyr::n_distinct(item_nomiss) > length(non_missing_choices)) {
+		non_missing_choices <- unique(item_nomiss)
+		names(non_missing_choices) <- non_missing_choices
 	}
   choice_multiplier <- old_height/6.5
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
@@ -530,36 +599,41 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
-
-if (is.numeric(item) || dplyr::n_distinct(item) < 20) {
-  attribs <- attributes(item)
-  item <- item[!is.na(item)]
-  attributes(item) <- attribs
-  plot_labelled(item, item_name, wrap_at, go_vertical)
+if (!length(item_nomiss)) {
+  cat("No non-missing values to show.")
+} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+  plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item), " unique, categorical values, so not shown.")
+	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary-------------------------------------------------------------
+attributes(item) <- item_attributes
 df = data.frame(item)
-names(df) = item_name
-pander::pander(codebook_table(df))
+names(df) = html_item_name
+knitr::kable(codebook_table(df), escape = TRUE)
 
-## ------------------------------------------------------------------------
+## ----missings------------------------------------------------------------
 if (show_missings) {
   plot_labelled(missings, item_name, wrap_at)
 }
 
-## ----items---------------------------------------------------------------
+## ----item_info-----------------------------------------------------------
 if (!is.null(item_info)) {
-  item_info$label_parsed <- item_info$choices <- 
+  # don't show choices again, if they're basically same thing as value labels
+  if (!is.null(choices) && !is.null(item_info$choices) && 
+    all(names(na.omit(choices)) == item_info$choices) &&
+    all(na.omit(choices) == names(item_info$choices))) {
+    item_info$choices <- NULL
+  }
+  item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(as.data.frame(t(item_info)))
+  pander::pander(item_info)
 }
 
 ## ----choices-------------------------------------------------------------
-if (!is.null(choices) && length(choices) < 30) {
+if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
@@ -597,8 +671,6 @@ if (exists("testing")) {
 }
 
 ## ----items, message=TRUE-------------------------------------------------
-metadata_table <- dplyr::mutate(metadata_table, 
-                name = paste0('<a href="#', .data$name, '">', .data$name, '</a>'))
 export_table(metadata_table)
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------

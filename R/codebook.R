@@ -14,6 +14,7 @@
 #' @param results a data frame, ideally with attributes set on variables
 #' @param reliabilities a named list with one entry per scale and one or several printable reliability computations for this scale. if NULL, computed on-the-fly using compute_reliabilities
 #' @param survey_repetition defaults to "auto" which is to try to determine the level of repetition from the "session" and "created" variables. Other values are: single, repeated_once, repeated_many
+#' @param survey_overview whether to print an overview of survey entries, durations (depends on presence of columns session, created, modified, ended, expired)
 #' @param missingness_report whether to print a missingness report. Turn off if this gets too complicated and you need a custom solution (e.g. in case of random missings).
 #' @param metadata_table whether to print a metadata table/tabular codebook.
 #' @param metadata_json whether to include machine-readable metadata as JSON-LD (not visible)
@@ -30,6 +31,7 @@
 #' md <- codebook(bfi, survey_repetition = "single", metadata_table = FALSE)
 codebook <- function(results, reliabilities = NULL,
     survey_repetition = c('auto', 'single', 'repeated_once', 'repeated_many'),
+    survey_overview = TRUE,
     missingness_report = TRUE, metadata_table = TRUE,
     metadata_json = TRUE, indent = '#') {
   # todo: factor out the time stuff
@@ -78,21 +80,21 @@ codebook <- function(results, reliabilities = NULL,
       paste0(knitr::opts_chunk$get("cache.path"), "cb_", df_name, "_")
   )
 
-  survey_overview <- ''
-  if (!(exists("session", results) &&
+  if (survey_overview &&
+        exists("session", results) &&
         exists("created", results) &&
         exists("ended", results) &&
         exists("expired", results) &&
-        exists("modified", results))) {
-    warning("The variables session, created, ended, expired, modified have to ",
-            "be defined for automatic survey duration calculations to work.")
-  } else {
+        exists("modified", results)) {
     survey_overview <- codebook_survey_overview(results, survey_repetition)
+  } else {
+    survey_overview <- ''
   }
 
-  scales_items <- c()
+  scales_items <- new.env()
   vars <- names(results)
   items_contained_in_scales <- c()
+  `%<-%` <- future::`%<-%`
   for (i in seq_along(vars)) {
     var <- vars[i]
     scale <- results[[ var ]]
@@ -102,10 +104,12 @@ codebook <- function(results, reliabilities = NULL,
                                      scale_info$scale_item_names, var)
       items <- dplyr::select(results,
                   rlang::UQS(rlang::quos(scale_info$scale_item_names)))
-      scales_items[var] <- codebook_component_scale(
-        scale = scale, scale_name = var,
-        items = items,
-        reliabilities = reliabilities[[var]], indent = indent)
+      scales_items[[var]] %<-% {tryCatch({
+        codebook_component_scale(
+          scale = scale, scale_name = var,
+          items = items,
+          reliabilities = reliabilities[[var]], indent = indent) },
+      error = function(e) stop("Could not summarise scale ", var, ". ", e)) }
     }
   }
 
@@ -117,10 +121,18 @@ codebook <- function(results, reliabilities = NULL,
     if (var %in% dont_show_these) {
       next # don't do scales again
     } else {
-      scales_items[var] <- codebook_component_single_item( item = item,
-                              item_name = var, indent = indent )
+      scales_items[[var]] %<-% {tryCatch({
+                      codebook_component_single_item( item = item,
+                              item_name = var, indent = indent ) },
+      error = function(e) stop("Could not summarise item ", var, ". ", e)) }
+
     }
   }
+
+  scales_items <- as.list(scales_items)
+  # reorder
+  done_vars <- intersect(vars, names(scales_items))
+  scales_items <- scales_items[done_vars]
 
   if (missingness_report) {
     missingness_report <- codebook_missingness(results, indent = indent)
@@ -261,6 +273,15 @@ codebook_items <- function(results, indent = "##") {
     cache.path = paste0(knitr::opts_chunk$get("cache.path"), "overview_")
   )
   metadata_table <- codebook_table(results)
+  metadata_table <- dplyr::mutate(metadata_table,
+         name = paste0('<a href="#', safe_name(.data$name), '">',
+                       recursive_escape(.data$name), '</a>'))
+  # bit ugly to suppress warnings here, but necessary for escaping whatever
+  # columns there may be
+  suppressWarnings(
+    metadata_table <- dplyr::mutate_at(metadata_table, dplyr::vars(
+    dplyr::one_of("label", "scale_item_names", "value_labels", "showif")),
+    dplyr::funs(recursive_escape)) )
 
   asis_knit_child(require_file("_codebook_items.Rmd"), options = options)
 }
@@ -288,10 +309,11 @@ codebook_component_scale <- function(scale, scale_name, items, reliabilities,
                                      indent = '##') {
   stopifnot( exists("scale_item_names", attributes(scale)))
   stopifnot( attributes(scale)$scale_item_names %in% names(items) )
+  safe_name <- safe_name(scale_name)
 
   options <- list(
-    fig.path = paste0(knitr::opts_chunk$get("fig.path"), scale_name, "_"),
-    cache.path = paste0(knitr::opts_chunk$get("cache.path"), scale_name, "_")
+    fig.path = paste0(knitr::opts_chunk$get("fig.path"), safe_name, "_"),
+    cache.path = paste0(knitr::opts_chunk$get("cache.path"), safe_name, "_")
   )
   old_opt <- options('knitr.duplicate.label')$knitr.duplicate.label
   options(knitr.duplicate.label = 'allow')
@@ -316,9 +338,10 @@ codebook_component_scale <- function(scale, scale_name, items, reliabilities,
 #' data("bfi")
 #' codebook_component_single_item(bfi$BFIK_open_1, "BFIK_open_1")
 codebook_component_single_item <- function(item, item_name, indent = '##') {
+  safe_name <- safe_name(item_name)
   options <- list(
-    fig.path = paste0(knitr::opts_chunk$get("fig.path"), item_name, "_"),
-    cache.path = paste0(knitr::opts_chunk$get("cache.path"), item_name, "_")
+    fig.path = paste0(knitr::opts_chunk$get("fig.path"), safe_name, "_"),
+    cache.path = paste0(knitr::opts_chunk$get("cache.path"), safe_name, "_")
   )
   asis_knit_child(require_file("_codebook_item.Rmd"), options = options)
 }

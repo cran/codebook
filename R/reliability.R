@@ -18,13 +18,15 @@
 #' reliabilities <- compute_reliabilities(bfi)
 
 compute_reliabilities <- function(results, survey_repetition = "single") {
-  reliabilities_futures <- new.env()
   vars <- names(results)
+  `%<-%` <- future::`%<-%`
+  reliabilities <- new.env()
+
   for (i in seq_along(vars)) {
     var <- vars[i]
     scale_info <- attributes(results[[var]])
     if (!is.null(scale_info) && exists("scale_item_names", scale_info)) {
-      reliabilities_futures[[ var ]] <- future::future(
+      reliabilities[[ var ]] %<-% {
         tryCatch({
           id_vars <- c("session", "created")
           id_vars <- intersect(id_vars, vars)
@@ -36,16 +38,10 @@ compute_reliabilities <- function(results, survey_repetition = "single") {
                                           items,
                                           survey_repetition)
         }, error = function(e) warning(e))
-      )
+      }
     }
   }
-  reliabilities <- list()
-  scale_names <- names(reliabilities_futures)
-  for (i in seq_along(reliabilities_futures)) {
-    scale <- scale_names[i]
-    reliabilities[[scale]] <- future::value(reliabilities_futures[[scale]])
-  }
-  reliabilities
+  as.list(reliabilities)
 }
 
 
@@ -55,7 +51,7 @@ compute_appropriate_reliability <- function(scale_name, scale_info,
   if (survey_repetition == 'single') {
     list(
       internal_consistency =
-        psych::alpha(data.frame(results[, scale_item_names]),
+        psych::alpha(as.data.frame(results[, scale_item_names]),
           title = scale_name, check.keys = FALSE)
     )
   } else if (survey_repetition == 'repeated_once') {
@@ -74,11 +70,11 @@ compute_appropriate_reliability <- function(scale_name, scale_info,
       key = .data$Time, value = !!dplyr::quo(scale_name), sep = "_")
     list(
       internal_consistency_T1 =
-        psych::alpha(data.frame(results[!duplicated(results$session),
+        psych::alpha(as.data.frame(results[!duplicated(results$session),
           scale_item_names]), title = paste( scale_name, "Time 1"),
           check.keys = FALSE),
       internal_consistency_T2 =
-        psych::alpha(data.frame(results[duplicated(results$session),
+        psych::alpha(as.data.frame(results[duplicated(results$session),
           scale_item_names]), title = paste( scale_name, "Time 2"),
           check.keys = FALSE),
       retest_reliability = stats::cor.test(wide$Time_1, wide$Time_2)
