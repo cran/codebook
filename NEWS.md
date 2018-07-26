@@ -1,3 +1,10 @@
+# codebook 0.6.0
+## Additions
+- Three RStudio Addin Shinyapps to browse variable labels and codebook. 
+
+## Bug fix
+- Specify a mice dependency that doesn't break degenerate test cases.
+
 # codebook 0.5.9
 ## Additions
 - plot_labelled now makes better plots for numeric variables

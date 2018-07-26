@@ -33,7 +33,7 @@ md_pattern <- function(data, only_vars_with_missings = TRUE, min_freq = 0.01) {
       # mice::md.pattern coerces character/factor to NA
       data[[i]] <- as.numeric(as.factor(data[[i]]))
     }
-    md_pattern <- mice::md.pattern(data)
+    md_pattern <- mice::md.pattern(data, plot = FALSE)
     n_miss <- rownames(md_pattern)
     if (is.null(n_miss)) {
       n_miss <- rep(0, nrow(md_pattern))
@@ -126,7 +126,7 @@ modified <- function(survey, variable = "modified") {
 
 export_table <- function(df) {
   DT::datatable(df, filter = "top", extensions = 'Buttons',
-                escape = setdiff(names(df), 'name'),
+                escape = setdiff(names(df), c('name', 'value_labels')),
                 options = list(
                   dom = 'Bfrtip',
                   buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),

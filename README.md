@@ -32,6 +32,18 @@ information contained in the attributes of the variables in your data
 frame. The [haven](https://github.com/hadley/haven) package also manages
 to grab variable documentation from SPSS or Stata files.
 
+## RStudio Addin
+
+If the RStudio data viewer scrolls slow for your taste, or you’d like to
+keep the variable labels in view while working, use our RStudio Addins
+(ideally assigned to a keyboard shortcut) to see and search variable and
+value labels in the viewer
+pane.
+
+![](https://rubenarslan.github.io/codebook/reference/figures/codebook_addin.gif)
+
+## Codebook generation
+
 The codebook package takes those attributes and the data and tries to
 produce a good-looking codebook, i.e. a place to get an overview of the
 variables in a dataset. The codebook processes single items, but also
@@ -82,8 +94,8 @@ devtools::install_github("rubenarslan/codebook")
 
 To cite the package
 
-> Arslan, R. C. (2018). Automatic codebook generation with codebook
-> (2018). URL <https://github.com/rubenarslan/codebook>.
+> Arslan, R. C. (2018). Automatic codebooks from survey metadata (2018).
+> URL <https://github.com/rubenarslan/codebook>.
 > doi:[10.5281/zenodo.1205454](https://doi.org/10.5281/zenodo.1205454)
 
 ### How to use

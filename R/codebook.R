@@ -276,6 +276,11 @@ codebook_items <- function(results, indent = "##") {
   metadata_table <- dplyr::mutate(metadata_table,
          name = paste0('<a href="#', safe_name(.data$name), '">',
                        recursive_escape(.data$name), '</a>'))
+  if (exists("value_labels", metadata_table)) {
+    metadata_table$value_labels <- gsub(pattern = "\n", replacement = "<br>",
+                                x = metadata_table$value_labels)
+  }
+
   # bit ugly to suppress warnings here, but necessary for escaping whatever
   # columns there may be
   suppressWarnings(
@@ -359,52 +364,7 @@ codebook_component_single_item <- function(item, item_name, indent = '##') {
 #' codebook_table(bfi)
 codebook_table <- function(results) {
   skimmed <- skim_to_wide_labelled(results)
-
-  metadata <- dplyr::bind_rows(
-    # var = results$session
-  lapply(results, function(var) {
-    x <- attributes(var)
-    if (is.null(x)) {
-      data.frame(label = NA)
-    } else {
-      if (exists("class", x)) {
-        x$class <- NULL
-      }
-      if (exists("tzone", x)) {
-        x$tzone <- NULL
-      }
-      if (exists("label", x)) {
-        if (exists("item", x)) {
-          if (exists("label", x$item)) {
-            x$item$label <- NULL
-          }
-          if (exists("label_parsed", x$item)) {
-            x$item$label_parsed <- NULL
-          }
-        }
-      }
-      if (exists("labels", x)) {
-        if (!is.null(names(x$labels))) {
-          x$value_labels <- paste(paste0(names(x$labels),
-                                         "=", x$labels), collapse = ",")
-        } else {
-          x$value_labels <- paste(x$labels, collapse = ",")
-        }
-        x$labels <- NULL
-        if (exists("item", x) && exists("choices", x$item)) {
-          x$item$choices <- NULL
-        }
-      }
-
-      if (exists("item", x) && exists("name", x$item)) {
-        x$item$name <- NULL
-      }
-      if (exists("scale_item_names", x)) {
-        x$scale_item_names <- paste(x$scale_item_names, collapse = ", ")
-      }
-      as.data.frame(t(purrr::flatten(x)))
-    }
-  }), .id = "name")
+  metadata <- metadata(results)
 
   metadata <- dplyr::left_join(metadata,
                                dplyr::rename(skimmed, data_type = .data$type),
@@ -426,6 +386,58 @@ codebook_table <- function(results) {
   dplyr::select_if(metadata, not_all_na )
 }
 
+metadata <- function(results) {
+    metadata <- purrr::map_dfr(results, attribute_summary, .id = "name")
+    stopifnot(nrow(metadata) == ncol(results))
+    metadata
+}
+
+attribute_summary <- function(var) {
+  x <- attributes(var)
+  if (is.null(x)) {
+    return(data.frame(label = NA_character_, stringsAsFactors = FALSE))
+  }
+  if (exists("class", x)) {
+    x$class <- NULL
+  }
+  if (exists("tzone", x)) {
+    x$tzone <- NULL
+  }
+  if (exists("label", x)) {
+    if (exists("item", x)) {
+      if (exists("label", x$item)) {
+        x$item$label <- NULL
+      }
+      if (exists("label_parsed", x$item)) {
+        x$item$label_parsed <- NULL
+      }
+    }
+  }
+  if (exists("labels", x)) {
+    if (!is.null(names(x$labels))) {
+      x$value_labels <- paste(paste0(x$labels, ". ", names(x$labels)),
+                              collapse = ",\n")
+    } else {
+      x$value_labels <- paste(x$labels, collapse = ",\n")
+    }
+    x$labels <- NULL
+    if (exists("item", x) && exists("choices", x$item)) {
+      x$item$choices <- NULL
+    }
+  }
+
+  if (exists("item", x) && exists("name", x$item)) {
+    x$item$name <- NULL
+  }
+  if (exists("scale_item_names", x)) {
+    x$scale_item_names <- paste(x$scale_item_names, collapse = ", ")
+  }
+  x <- purrr::flatten_dfr(purrr::flatten(x))
+  if (ncol(x) == 0) {
+    x <- data.frame(label = NA_character_, stringsAsFactors = FALSE)
+  }
+  x
+}
 
 
 #' Metadata from dataframe
