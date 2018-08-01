@@ -1,48 +1,103 @@
-## ------------------------------------------------------------------------
+## ----message = FALSE-----------------------------------------------------
 knit_by_pkgdown <- !is.null(knitr::opts_chunk$get("fig.retina"))
-knitr::opts_chunk$set(warning = TRUE, message = TRUE, error = TRUE, echo = FALSE)
+library(dplyr)
+library(codebook)
+library(labelled)
 pander::panderOptions("table.split.table", Inf)
 ggplot2::theme_set(ggplot2::theme_bw())
 
-library(codebook)
-data("bfi", package = 'codebook')
-bfi$age <- rpois(nrow(bfi), 30)
-library(labelled)
-var_label(bfi$age) <- "Alter"
+data("bfi", package = 'psych')
+bfi <- bfi %>% tbl_df()
+data("bfi.dictionary", package = 'psych')
+bfi.dictionary$variable = rownames(bfi.dictionary)
+bfi.dictionary <- bfi.dictionary %>% tbl_df()
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
-if (exists("testing")) {
-	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
-	results = data.frame()
-	survey_repetition = 'single'
-	reliabilities = list()
+## ------------------------------------------------------------------------
+head(bfi, 20)
+
+## ------------------------------------------------------------------------
+bfi.dictionary
+
+## ------------------------------------------------------------------------
+# First, let's see what we know about these variables.
+bfi <- bfi %>% # here we use the pipe (feeding the bfi argument into the pipe)
+  mutate(education = as.double(education), # the labelled class is a bit picky and doesn't like integers
+         gender = as.double(gender))
+
+bfi.dictionary %>% tail(3)
+var_label(bfi$gender) <- "Self-reported gender"
+attributes(bfi$gender) # check what we're doing
+var_label(bfi) <- list(age = "age in years", education = "Highest degree")
+
+# or using dplyr syntax
+bfi <- bfi %>% set_variable_labels(
+  age = "age in years", 
+  education = "Highest degree")
+
+## ------------------------------------------------------------------------
+bfi <- bfi %>% 
+  add_value_labels(
+    gender = c("male" = 1, "female" = 2),
+    education = c("in high school" = 1, "finished high school" = 2,
+                  "some college" = 3, "college graduate" = 4, 
+                  "graduate degree" = 5) # dont use abbreviations if you can avoid it
+    )
+attributes(bfi$gender) # check what we're doing
+
+# We could also assign the attributes manually, but then there's no error checking.
+attributes(bfi$gender) <- list(
+  label = "Self-reported gender", 
+  labels = c(male = 1L, female = 2L), 
+  class = "labelled")
+
+## ------------------------------------------------------------------------
+dict <- bfi.dictionary %>% 
+  filter(! variable %in% c("gender", "education", "age")) %>% # we did those already
+  mutate(label = paste0(Big6, ": ", Item)) %>% # make sure we name the construct in the label
+  select(variable, label, Keying)
+
+# turn the key-value data frame into  a list
+labels <- dict$label %>% as.character() %>% as.list() %>% 
+  purrr::set_names(dict$variable)
+
+# assign the list of labels to the bfi data frame
+var_label(bfi) <- labels
+
+# assign value labels to all likert items
+value_labels <- c("Very Inaccurate" = 1, 
+                  "Moderately Inaccurate" = 2, 
+                  "Slightly Inaccurate" = 3,
+                  "Slightly Accurate" = 4,
+                  "Moderately Accurate" = 5,
+                  "Very Accurate" = 6)
+
+add_likert_label <- function(x) {
+  val_labels(x) <- value_labels
+  x
 }
 
-## ----repeated------------------------------------------------------------
-if (survey_repetition != "single") {
-	overview = results %>% dplyr::group_by(session) %>% 
-		dplyr::summarise(
-			n = sum(!is.na(session)),
-			expired = sum(!is.na(expired)),
-			ended = sum(!is.na(ended))
-		) %>% 
-		tidyr::gather(key, value, -session)
-	if (length(unique(dplyr::filter(overview, key == "expired")$value)) == 1) {
-		overview = dplyr::filter(overview, key != "expired")
-	}
-	print(
-		ggplot2::ggplot(overview, ggplot2::aes(value, ..count..)) + ggplot2::geom_bar() + ggplot2::facet_wrap(~ key, nrow = 1)
-	)
-}
+bfi <- bfi %>% 
+  mutate_at(dict %>% pull(variable), 
+                         add_likert_label)
 
-## ----starting_time-------------------------------------------------------
-ggplot2::qplot(results$created) + ggplot2::scale_x_datetime("Date/time when survey was started")
+# reverse underlying values for the reverse-keyed items
+bfi <- bfi %>% 
+  mutate_at(dict %>% filter(Keying == -1) %>% pull(variable), 
+    reverse_labelled_values) %>% 
+  rename_at(dict %>% filter(Keying == -1) %>% pull(variable), 
+    ~ paste0(.,"R"))
 
-## ----duration------------------------------------------------------------
-if (low_vals == 0) {
-  warning("Durations below 0 detected.")
-}
-ggplot2::qplot(duration$duration, binwidth = 0.5) + ggplot2::scale_x_continuous(paste("Duration (in minutes), excluding", high_vals, "values above median + 4*MAD"), limits = c(lower_limit, upper_limit))
+attributes(bfi$A1R)
+
+## ------------------------------------------------------------------------
+bfi$consc <- aggregate_and_document_scale(bfi %>% select(starts_with("C")))
+bfi$extra <- aggregate_and_document_scale(bfi %>% select(starts_with("E", ignore.case = F)))
+bfi$open <- aggregate_and_document_scale(bfi %>% select(starts_with("O")))
+bfi$agree <- aggregate_and_document_scale(bfi %>% select(starts_with("A", ignore.case = F)))
+bfi$neuro <- aggregate_and_document_scale(bfi %>% select(starts_with("N")))
+
+## ------------------------------------------------------------------------
+knitr::opts_chunk$set(warning = TRUE, message = TRUE, error = TRUE, echo = FALSE)
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
@@ -642,6 +697,228 @@ if (!is.null(choices) && length(choices) && length(choices) < 30) {
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
+	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+}
+if (exists("testing")) {
+	item <- 1:10
+	item_name <- safe_name <- "yay"
+	attributes(item) <- list(label = 'yayya')
+}
+
+item_attributes <- recursive_escape(attributes(item))
+html_item_name <- recursive_escape(item_name)
+item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
+                     "", item_attributes$label)
+item_info <- item_attributes$item
+choices <- item_attributes$labels
+
+## ----setup_missings------------------------------------------------------
+show_missings <- FALSE
+if (has_label(item)) {
+  missings <- item[is.na(haven::zap_missing(item))]
+  attributes(missings) <- attributes(item)
+  if (!is.null(attributes(item)$labels)) {
+    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
+  }
+  if (is.numeric(item)) {
+    show_missings <- length(unique(haven::na_tag(missings))) > 1
+    item <- haven::zap_missing(item)
+  }
+  if (length(item_attributes$labels) == 0 && is.numeric(item)) {
+    item <- haven::zap_labels(item)
+  }
+}
+item_nomiss <- item[!is.na(item)]
+
+# unnest mc_multiple and so on
+if (
+  is.character(item_nomiss) &&
+  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  (exists("type", item_info) && 
+    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+  ) {
+  item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
+}
+attributes(item_nomiss) <- attributes(item)
+
+old_height <- knitr::opts_chunk$get("fig.height")
+non_missing_choices <- item_attributes[["labels"]]
+many_labels <- length(non_missing_choices) > 7
+go_vertical <- !is.numeric(item_nomiss) || many_labels
+if ( go_vertical ) {
+  # numeric items are plotted horizontally (because that's what usually expected)
+  # categorical items are plotted vertically because we can use the screen real estate better this way
+
+	if (is.null(choices) || 
+	    dplyr::n_distinct(item_nomiss) > length(non_missing_choices)) {
+		non_missing_choices <- unique(item_nomiss)
+		names(non_missing_choices) <- non_missing_choices
+	}
+  choice_multiplier <- old_height/6.5
+	new_height <- 2 + choice_multiplier * length(non_missing_choices)
+	new_height <- ifelse(new_height > 20, 20, new_height)
+	new_height <- ifelse(new_height < 1, 1, new_height)
+	knitr::opts_chunk$set(fig.height = new_height)
+}
+
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
+
+## ----distribution--------------------------------------------------------
+# todo: if there are free-text choices mingled in with the pre-defined ones, don't show
+# todo: show rare items if they are pre-defined
+# todo: bin rare responses into "other category"
+if (!length(item_nomiss)) {
+  cat("No non-missing values to show.")
+} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+  plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
+} else {
+	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+}
+knitr::opts_chunk$set(fig.height = old_height)
+
+## ----summary-------------------------------------------------------------
+attributes(item) <- item_attributes
+df = data.frame(item, stringsAsFactors = FALSE)
+names(df) = html_item_name
+escaped_table(codebook_table(df))
+
+## ----missings------------------------------------------------------------
+if (show_missings) {
+  plot_labelled(missings, item_name, wrap_at)
+}
+
+## ----item_info-----------------------------------------------------------
+if (!is.null(item_info)) {
+  # don't show choices again, if they're basically same thing as value labels
+  if (!is.null(choices) && !is.null(item_info$choices) && 
+    all(names(na.omit(choices)) == item_info$choices) &&
+    all(na.omit(choices) == names(item_info$choices))) {
+    item_info$choices <- NULL
+  }
+  item_info$label_parsed <- 
+    item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
+  pander::pander(item_info)
+}
+
+## ----choices-------------------------------------------------------------
+if (!is.null(choices) && length(choices) && length(choices) < 30) {
+	pander::pander(as.list(choices))
+}
+
+## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+if (!exists("indent")) {
+	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+}
+if (exists("testing")) {
+	item <- 1:10
+	item_name <- safe_name <- "yay"
+	attributes(item) <- list(label = 'yayya')
+}
+
+item_attributes <- recursive_escape(attributes(item))
+html_item_name <- recursive_escape(item_name)
+item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
+                     "", item_attributes$label)
+item_info <- item_attributes$item
+choices <- item_attributes$labels
+
+## ----setup_missings------------------------------------------------------
+show_missings <- FALSE
+if (has_label(item)) {
+  missings <- item[is.na(haven::zap_missing(item))]
+  attributes(missings) <- attributes(item)
+  if (!is.null(attributes(item)$labels)) {
+    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
+  }
+  if (is.numeric(item)) {
+    show_missings <- length(unique(haven::na_tag(missings))) > 1
+    item <- haven::zap_missing(item)
+  }
+  if (length(item_attributes$labels) == 0 && is.numeric(item)) {
+    item <- haven::zap_labels(item)
+  }
+}
+item_nomiss <- item[!is.na(item)]
+
+# unnest mc_multiple and so on
+if (
+  is.character(item_nomiss) &&
+  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  (exists("type", item_info) && 
+    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+  ) {
+  item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
+}
+attributes(item_nomiss) <- attributes(item)
+
+old_height <- knitr::opts_chunk$get("fig.height")
+non_missing_choices <- item_attributes[["labels"]]
+many_labels <- length(non_missing_choices) > 7
+go_vertical <- !is.numeric(item_nomiss) || many_labels
+if ( go_vertical ) {
+  # numeric items are plotted horizontally (because that's what usually expected)
+  # categorical items are plotted vertically because we can use the screen real estate better this way
+
+	if (is.null(choices) || 
+	    dplyr::n_distinct(item_nomiss) > length(non_missing_choices)) {
+		non_missing_choices <- unique(item_nomiss)
+		names(non_missing_choices) <- non_missing_choices
+	}
+  choice_multiplier <- old_height/6.5
+	new_height <- 2 + choice_multiplier * length(non_missing_choices)
+	new_height <- ifelse(new_height > 20, 20, new_height)
+	new_height <- ifelse(new_height < 1, 1, new_height)
+	knitr::opts_chunk$set(fig.height = new_height)
+}
+
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
+
+## ----distribution--------------------------------------------------------
+# todo: if there are free-text choices mingled in with the pre-defined ones, don't show
+# todo: show rare items if they are pre-defined
+# todo: bin rare responses into "other category"
+if (!length(item_nomiss)) {
+  cat("No non-missing values to show.")
+} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+  plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
+} else {
+	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+}
+knitr::opts_chunk$set(fig.height = old_height)
+
+## ----summary-------------------------------------------------------------
+attributes(item) <- item_attributes
+df = data.frame(item, stringsAsFactors = FALSE)
+names(df) = html_item_name
+escaped_table(codebook_table(df))
+
+## ----missings------------------------------------------------------------
+if (show_missings) {
+  plot_labelled(missings, item_name, wrap_at)
+}
+
+## ----item_info-----------------------------------------------------------
+if (!is.null(item_info)) {
+  # don't show choices again, if they're basically same thing as value labels
+  if (!is.null(choices) && !is.null(item_info$choices) && 
+    all(names(na.omit(choices)) == item_info$choices) &&
+    all(na.omit(choices) == names(item_info$choices))) {
+    item_info$choices <- NULL
+  }
+  item_info$label_parsed <- 
+    item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
+  pander::pander(item_info)
+}
+
+## ----choices-------------------------------------------------------------
+if (!is.null(choices) && length(choices) && length(choices) < 30) {
+	pander::pander(as.list(choices))
+}
+
+## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+if (!exists("indent")) {
 	indent <- '#' # ugly hack
 }
 if (exists("testing")) {
@@ -693,7 +970,8 @@ items
 jsonld
 
 ## ----cb------------------------------------------------------------------
-codebook(bfi, metadata_table = knit_by_pkgdown, metadata_json = knit_by_pkgdown)
+codebook(bfi, survey_repetition = "single",
+         metadata_table = knit_by_pkgdown, metadata_json = knit_by_pkgdown)
 
 ## ------------------------------------------------------------------------
 if (!knit_by_pkgdown) {

@@ -126,7 +126,8 @@ modified <- function(survey, variable = "modified") {
 
 export_table <- function(df) {
   DT::datatable(df, filter = "top", extensions = 'Buttons',
-                escape = setdiff(names(df), c('name', 'value_labels')),
+                escape = FALSE,
+                rownames = FALSE,
                 options = list(
                   dom = 'Bfrtip',
                   buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
@@ -165,4 +166,44 @@ summary.labelled <- function(object, ...) {
 #'
 summary.labelled_spss <- function(object, ...) {
   summary(haven::as_factor(object, levels = "both"), ...)
+}
+
+
+
+#' Has label
+#'
+#'
+#' @param x a vector
+#'
+#' @export
+#' @examples
+#' example("labelled", "haven")
+#' has_label(x)
+has_label <- function(x) {
+  haven::is.labelled(x) ||
+    !is.null(attr(x, 'label')) ||
+    !is.null(attr(x, 'labels'))
+}
+
+
+#' Has labels
+#'
+#'
+#' @param x a vector
+#'
+#' @export
+#' @examples
+#' example("labelled", "haven")
+#' has_labels(x)
+has_labels <- function(x) {
+  haven::is.labelled(x) ||
+    !is.null(attr(x, 'labels'))
+}
+
+#' @export
+as_factor.default <- function(x,
+          levels = c("default", "labels", "values", "both"),
+          ordered = FALSE, ...) {
+  class(x) <- c("labelled", class(x))
+  haven::as_factor(x, levels, ordered, ...)
 }
