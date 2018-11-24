@@ -32,6 +32,107 @@ var_label(bfi$beta) <- "Beta: higher order personality factor (extra, open)"
 bfi <- bfi %>% select(beta, starts_with("BFIK_extra"), starts_with("BFIK_open"))
 if (!knit_by_pkgdown) knitr::opts_chunk$set(echo = FALSE)
 
+## ------------------------------------------------------------------------
+metadata(bfi)$name <- "MOCK Big Five Inventory dataset (German metadata demo)"
+metadata(bfi)$description <- "a small mock Big Five Inventory dataset"
+metadata(bfi)$identifier <- "doi:10.5281/zenodo.1326520"
+metadata(bfi)$datePublished <- "2016-06-01"
+metadata(bfi)$creator <- list(
+      "@type" = "Person",
+      givenName = "Ruben", familyName = "Arslan",
+      email = "ruben.arslan@gmail.com", 
+      affiliation = list("@type" = "Organization",
+        name = "MPI Human Development, Berlin"))
+metadata(bfi)$citation <- "Arslan (2016). Mock BFI data."
+metadata(bfi)$url <- "https://rubenarslan.github.io/codebook/articles/codebook.html"
+metadata(bfi)$temporalCoverage <- "2016" 
+metadata(bfi)$spatialCoverage <- "Goettingen, Germany" 
+
+## ------------------------------------------------------------------------
+# We don't want to look at the code in the codebook.
+knitr::opts_chunk$set(warning = TRUE, message = TRUE, echo = FALSE)
+
+## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+if (exists("testing")) {
+	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	results = data("bfi")
+	metadata(results)$description <- data_description_default(bfi)
+}
+
+meta <- metadata(results)
+description <- meta$description
+meta <- recursive_escape(meta)
+
+## ----results='asis'------------------------------------------------------
+if (exists("name", meta)) {
+  glue::glue(
+    "__Dataset name__: {name}",
+    .envir = meta)
+}
+
+## ----results='asis'------------------------------------------------------
+cat(description)
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("temporalCoverage", meta)) {
+  glue::glue(
+    "- __Temporal Coverage__: {temporalCoverage}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("spatialCoverage", meta)) {
+  glue::glue(
+    "- __Spatial Coverage__: {spatialCoverage}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("citation", meta)) {
+  glue::glue(
+    "- __Citation__: {citation}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("url", meta)) {
+  glue::glue(
+    "- __URL__: [{url}]({url})",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("identifier", meta)) {
+  if (stringr::str_detect(meta$identifier, "^doi:")) {
+    meta$identifier <- paste0('<a href="https://dx.doi.org/', 
+      stringr::str_match(meta$identifier, "^doi:(.+)")[,2], '">', 
+      meta$identifier, '</a>')
+  }
+  glue::glue(
+    "- __Identifier__: {identifier}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("datePublished", meta)) {
+  glue::glue(
+    "- __Date published__: {datePublished}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("creator", meta)) {
+  cat("- __Creator__:")
+  pander::pander(meta$creator)
+}
+
+## ------------------------------------------------------------------------
+meta <- meta[setdiff(names(meta),
+                     c("creator", "datePublished", "identifier",
+                       "url", "citation", "spatialCoverage", 
+                       "temporalCoverage", "description", "name"))]
+pander::pander(meta)
+
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
 	indent <- '#'
@@ -78,7 +179,7 @@ if (length(breaks)) {
   dist_plot <- dist_plot +
     	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+	                            labels = stringr::str_wrap(unlist(choices), ceiling(wrap_at * 0.21))) +
       ggplot2::expand_limits(x = range(breaks)))
   
 }
@@ -175,7 +276,7 @@ if (length(breaks)) {
   dist_plot <- dist_plot +
     	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+	                            labels = stringr::str_wrap(unlist(choices), ceiling(wrap_at * 0.21))) +
       ggplot2::expand_limits(x = range(breaks)))
   
 }
@@ -272,7 +373,7 @@ if (length(breaks)) {
   dist_plot <- dist_plot +
     	ggplot2::scale_x_continuous("values", 
 	                            breaks = breaks, 
-	                            labels = stringr::str_wrap(unlist(choices), 15)) +
+	                            labels = stringr::str_wrap(unlist(choices), ceiling(wrap_at * 0.21))) +
       ggplot2::expand_limits(x = range(breaks)))
   
 }
@@ -335,16 +436,17 @@ if (exists("testing")) {
 }
 
 ## ----missingness_all_setup-----------------------------------------------
-if (  exists("ended", results) &&
-  exists("expired", results)) {
-  finisher_results <- dplyr::filter(results, !is.na(.data$ended))
-} else {
-  finisher_results <- results
+if (!exists("ended", results) ||
+  !exists("expired", results)) {
   warning("Could not figure out who finished the surveys, because the ",
           "variables expired and ended were missing.")
 }
 if (length(md_pattern)) {
-  pander::pander(md_pattern)
+  if (knitr::is_html_output()) {
+    rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
+  } else {
+    knitr::kable(md_pattern)
+  }
 }
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -356,9 +458,13 @@ if (exists("testing")) {
 	survey_repetition <- 'single'
 	reliabilities <- list()
 	missingness_report <- ''
+	data_info <- '' 
 	survey_overview <- '' 
 	scales_items <- c()
 }
+
+## ------------------------------------------------------------------------
+knitr::asis_output(data_info)
 
 ## ------------------------------------------------------------------------
 knitr::asis_output(survey_overview)

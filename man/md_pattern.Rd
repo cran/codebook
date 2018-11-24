@@ -4,12 +4,12 @@
 \alias{md_pattern}
 \title{Missing data patterns}
 \usage{
-md_pattern(data, only_vars_with_missings = TRUE, min_freq = 0.01)
+md_pattern(data, omit_complete = TRUE, min_freq = 0.01)
 }
 \arguments{
 \item{data}{the dataset}
 
-\item{only_vars_with_missings}{defaults to TRUE, omitting variables that have no missings}
+\item{omit_complete}{defaults to TRUE, omitting variables without missing values}
 
 \item{min_freq}{minimum number of rows to have this missingness pattern}
 }
@@ -18,7 +18,7 @@ Generate missingness patterns using \code{\link[mice:md.pattern]{mice::md.patter
 with options to reduce the complexity of the output.
 }
 \examples{
-data("nhanes", package = "mice")
-md_pattern(nhanes)
-md_pattern(nhanes, only_vars_with_missings = FALSE, min_freq = 0.2)
+data("bfi", package = 'psych')
+md_pattern(bfi)
+md_pattern(bfi, omit_complete = FALSE, min_freq = 0.2)
 }

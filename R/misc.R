@@ -11,6 +11,46 @@ require_package <- function(package) {
   invisible(TRUE)
 }
 
+# taken from mice to reduce dependencies
+# https://github.com/stefvanbuuren/mice
+md.pattern <- function(x, plot = FALSE)
+{
+  if (plot != FALSE) {
+    stop("Please use the original mice::md.pattern function for plots.")
+  }
+  if (!(is.matrix(x) || is.data.frame(x)))
+    stop("Data should be a matrix or dataframe")
+  if (ncol(x) < 2)
+    stop("Data should have at least two columns")
+  R <- is.na(x)
+  nmis <- colSums(R)
+  R <- matrix(R[, order(nmis)], dim(x))
+  pat <- apply(R, 1, function(x) paste(as.numeric(x), collapse = ""))
+  sortR <- matrix(R[order(pat), ], dim(x))
+  if (nrow(x) == 1) {
+    mpat <- is.na(x)
+  }
+  else {
+    mpat <- sortR[!duplicated(sortR), ]
+  }
+  if (all(!is.na(x))) {
+    cat(" /\\     /\\\n{  `---'  }\n{  O   O  }\n==>  V <==")
+    cat("  No need for mice. This data set is completely observed.\n")
+    cat(" \\  \\|/  /\n  `-----'\n\n")
+    mpat <- t(as.matrix(mpat, byrow = TRUE))
+    rownames(mpat) <- table(pat)
+  }
+  else {
+    if (is.null(dim(mpat))) {
+      mpat <- t(as.matrix(mpat))
+    }
+    rownames(mpat) <- table(pat)
+  }
+  r <- cbind(abs(mpat - 1), rowSums(mpat))
+  r <- rbind(r, c(nmis[order(nmis)], sum(nmis)))
+  r
+}
+
 
 #' Missing data patterns
 #'
@@ -18,29 +58,29 @@ require_package <- function(package) {
 #' with options to reduce the complexity of the output.
 #'
 #' @param data the dataset
-#' @param only_vars_with_missings defaults to TRUE, omitting variables that have no missings
+#' @param omit_complete defaults to TRUE, omitting variables without missing values
 #' @param min_freq minimum number of rows to have this missingness pattern
 #' @export
 #' @examples
-#' data("nhanes", package = "mice")
-#' md_pattern(nhanes)
-#' md_pattern(nhanes, only_vars_with_missings = FALSE, min_freq = 0.2)
-md_pattern <- function(data, only_vars_with_missings = TRUE, min_freq = 0.01) {
+#' data("bfi", package = 'psych')
+#' md_pattern(bfi)
+#' md_pattern(bfi, omit_complete = FALSE, min_freq = 0.2)
+md_pattern <- function(data, omit_complete = TRUE, min_freq = 0.01) {
   if (sum(is.na(data)) == 0) {
-    message("No missings.")
+    message("No missing values.")
   } else {
     for (i in seq_along(names(data))) {
       # mice::md.pattern coerces character/factor to NA
       data[[i]] <- as.numeric(as.factor(data[[i]]))
     }
-    md_pattern <- mice::md.pattern(data, plot = FALSE)
+    md_pattern <- md.pattern(data, plot = FALSE)
     n_miss <- rownames(md_pattern)
     if (is.null(n_miss)) {
       n_miss <- rep(0, nrow(md_pattern))
     }
     colnames(md_pattern)[ncol(md_pattern)] <- "var_miss"
     rownames(md_pattern) <- NULL
-    if (only_vars_with_missings) {
+    if (omit_complete) {
       missing_by_var <- md_pattern[nrow(md_pattern), ]
       md_pattern <- md_pattern[, missing_by_var > 0]
     }
@@ -50,9 +90,9 @@ md_pattern <- function(data, only_vars_with_missings = TRUE, min_freq = 0.01) {
     md_pattern$n_miss[nrow(md_pattern)] <-
       md_pattern$var_miss[nrow(md_pattern)]
     stopifnot(!exists("description", md_pattern))
-    md_pattern$description <- paste0("Missings in ", md_pattern$var_miss,
+    md_pattern$description <- paste0("Missing values in ", md_pattern$var_miss,
                                      " variables")
-    md_pattern$description[nrow(md_pattern)] <- "Missings per variable"
+    md_pattern$description[nrow(md_pattern)] <- "Missing values per variable"
     md_pattern <- md_pattern[, c(ncol(md_pattern), 1:(ncol(md_pattern) - 1))]
 
     other <- md_pattern[ md_pattern$n_miss / nrow(data) < min_freq, -1]
@@ -204,6 +244,10 @@ has_labels <- function(x) {
 as_factor.default <- function(x,
           levels = c("default", "labels", "values", "both"),
           ordered = FALSE, ...) {
-  class(x) <- c("labelled", class(x))
+  class(x) <- c("haven_labelled", class(x))
   haven::as_factor(x, levels, ordered, ...)
+}
+
+is_attribute_set <- function(attribute, data) {
+  !is.null(attr(data, attribute, exact = TRUE))
 }

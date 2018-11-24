@@ -1,3 +1,27 @@
+# codebook 0.7.4
+
+## Additions
+- Function `new_codebook_rmd` creates a new file in your working directory
+with a codebook template.
+- Function `metadata` can be used to set dataset-level metadata before rendering
+  a codebook (valid attributes will carry over to JSON-LD representation)
+- Compliance with Google Dataset Search, see [examples](https://toolbox.google.com/datasetsearch/search?query=site%3Arubenarslan.github.io)
+
+## Changes
+- removed `zap_label` because haven 2.0.0 has this function
+- added several functions to add JSON-LD compliant metadata and to show it
+  in the codebook
+- removed some non-standard attributes from the JSON-LD metadata so that datasets
+  will be indexed in Google Dataset Search
+- work with haven 2.0.0's changed class names
+- play nice with `userfriendlyscience::makeScales` attributes
+- improved binning and wrapping in `plot_labelled`
+- removed the mice dependency to reduce the number of dependencies
+
+## Bugfixes
+- `detect_missing` reset variable label with the new haven version (only between 0.6.3.9000 and 0.7.0, never on CRAN)
+- `reverse_labelled_values` mislabelled values, if there were labelled missing values (numbers were correct)
+
 # codebook 0.6.3
 ## Additions
 - Vignettes for

@@ -37,6 +37,106 @@ results <- results %>% rio::spread_attrs()
 results <- results %>% select(ResponseSet, Q7, Q10)
 if (!knit_by_pkgdown) knitr::opts_chunk$set(echo = FALSE)
 
+## ------------------------------------------------------------------------
+metadata(results)$name <- "MOCK Qualtrics dataset"
+metadata(results)$description <- "a MOCK dataset used to show how to import Qualtrics metadata into the codebook R package"
+metadata(results)$identifier <- "doi:10.5281/zenodo.1326520"
+metadata(results)$datePublished <- "2018-08-01"
+metadata(results)$creator <- list(
+      "@type" = "Person",
+      givenName = "Ruben", familyName = "Arslan",
+      email = "ruben.arslan@gmail.com", 
+      affiliation = list("@type" = "Organization",
+        name = "MPI Human Development, Berlin"))
+metadata(results)$url <- "https://rubenarslan.github.io/codebook/articles/codebook_qualtrics.html"
+metadata(results)$temporalCoverage <- "2018" 
+metadata(results)$spatialCoverage <- "Nowhere" 
+
+## ------------------------------------------------------------------------
+# We don't want to look at the code in the codebook.
+knitr::opts_chunk$set(warning = TRUE, message = TRUE, echo = FALSE)
+
+## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+if (exists("testing")) {
+	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	results = data("bfi")
+	metadata(results)$description <- data_description_default(bfi)
+}
+
+meta <- metadata(results)
+description <- meta$description
+meta <- recursive_escape(meta)
+
+## ----results='asis'------------------------------------------------------
+if (exists("name", meta)) {
+  glue::glue(
+    "__Dataset name__: {name}",
+    .envir = meta)
+}
+
+## ----results='asis'------------------------------------------------------
+cat(description)
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("temporalCoverage", meta)) {
+  glue::glue(
+    "- __Temporal Coverage__: {temporalCoverage}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("spatialCoverage", meta)) {
+  glue::glue(
+    "- __Spatial Coverage__: {spatialCoverage}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("citation", meta)) {
+  glue::glue(
+    "- __Citation__: {citation}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("url", meta)) {
+  glue::glue(
+    "- __URL__: [{url}]({url})",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("identifier", meta)) {
+  if (stringr::str_detect(meta$identifier, "^doi:")) {
+    meta$identifier <- paste0('<a href="https://dx.doi.org/', 
+      stringr::str_match(meta$identifier, "^doi:(.+)")[,2], '">', 
+      meta$identifier, '</a>')
+  }
+  glue::glue(
+    "- __Identifier__: {identifier}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("datePublished", meta)) {
+  glue::glue(
+    "- __Date published__: {datePublished}",
+    .envir = meta)
+}
+
+## ----results='asis', echo = FALSE----------------------------------------
+if (exists("creator", meta)) {
+  cat("- __Creator__:")
+  pander::pander(meta$creator)
+}
+
+## ------------------------------------------------------------------------
+meta <- meta[setdiff(names(meta),
+                     c("creator", "datePublished", "identifier",
+                       "url", "citation", "spatialCoverage", 
+                       "temporalCoverage", "description", "name"))]
+pander::pander(meta)
+
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
@@ -54,17 +154,17 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missings------------------------------------------------------
-show_missings <- FALSE
-if (has_label(item)) {
-  missings <- item[is.na(haven::zap_missing(item))]
-  attributes(missings) <- attributes(item)
+## ----setup_missing_values------------------------------------------------
+show_missing_values <- FALSE
+if (has_labels(item)) {
+  missing_values <- item[is.na(haven::zap_missing(item))]
+  attributes(missing_values) <- attributes(item)
   if (!is.null(attributes(item)$labels)) {
-    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(missing_values)$labels <- attributes(missing_values)$labels[is.na(attributes(missing_values)$labels)]
     attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
   }
-  if (is.numeric(item)) {
-    show_missings <- length(unique(haven::na_tag(missings))) > 1
+  if (is.double(item)) {
+    show_missing_values <- length(unique(haven::na_tag(missing_values))) > 1
     item <- haven::zap_missing(item)
   }
   if (length(item_attributes$labels) == 0 && is.numeric(item)) {
@@ -76,9 +176,10 @@ item_nomiss <- item[!is.na(item)]
 # unnest mc_multiple and so on
 if (
   is.character(item_nomiss) &&
-  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
   (exists("type", item_info) && 
-    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+    any(stringr::str_detect(item_info$type, 
+                            pattern = stringr::fixed("multiple"))))
   ) {
   item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
 }
@@ -125,9 +226,9 @@ df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missings------------------------------------------------------------
-if (show_missings) {
-  plot_labelled(missings, item_name, wrap_at)
+## ----missing_values------------------------------------------------------
+if (show_missing_values) {
+  plot_labelled(missing_values, item_name, wrap_at)
 }
 
 ## ----item_info-----------------------------------------------------------
@@ -165,17 +266,17 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missings------------------------------------------------------
-show_missings <- FALSE
-if (has_label(item)) {
-  missings <- item[is.na(haven::zap_missing(item))]
-  attributes(missings) <- attributes(item)
+## ----setup_missing_values------------------------------------------------
+show_missing_values <- FALSE
+if (has_labels(item)) {
+  missing_values <- item[is.na(haven::zap_missing(item))]
+  attributes(missing_values) <- attributes(item)
   if (!is.null(attributes(item)$labels)) {
-    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(missing_values)$labels <- attributes(missing_values)$labels[is.na(attributes(missing_values)$labels)]
     attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
   }
-  if (is.numeric(item)) {
-    show_missings <- length(unique(haven::na_tag(missings))) > 1
+  if (is.double(item)) {
+    show_missing_values <- length(unique(haven::na_tag(missing_values))) > 1
     item <- haven::zap_missing(item)
   }
   if (length(item_attributes$labels) == 0 && is.numeric(item)) {
@@ -187,9 +288,10 @@ item_nomiss <- item[!is.na(item)]
 # unnest mc_multiple and so on
 if (
   is.character(item_nomiss) &&
-  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
   (exists("type", item_info) && 
-    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+    any(stringr::str_detect(item_info$type, 
+                            pattern = stringr::fixed("multiple"))))
   ) {
   item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
 }
@@ -236,9 +338,9 @@ df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missings------------------------------------------------------------
-if (show_missings) {
-  plot_labelled(missings, item_name, wrap_at)
+## ----missing_values------------------------------------------------------
+if (show_missing_values) {
+  plot_labelled(missing_values, item_name, wrap_at)
 }
 
 ## ----item_info-----------------------------------------------------------
@@ -276,17 +378,17 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missings------------------------------------------------------
-show_missings <- FALSE
-if (has_label(item)) {
-  missings <- item[is.na(haven::zap_missing(item))]
-  attributes(missings) <- attributes(item)
+## ----setup_missing_values------------------------------------------------
+show_missing_values <- FALSE
+if (has_labels(item)) {
+  missing_values <- item[is.na(haven::zap_missing(item))]
+  attributes(missing_values) <- attributes(item)
   if (!is.null(attributes(item)$labels)) {
-    attributes(missings)$labels <- attributes(missings)$labels[is.na(attributes(missings)$labels)]
+    attributes(missing_values)$labels <- attributes(missing_values)$labels[is.na(attributes(missing_values)$labels)]
     attributes(item)$labels <- attributes(item)$labels[!is.na(attributes(item)$labels)]
   }
-  if (is.numeric(item)) {
-    show_missings <- length(unique(haven::na_tag(missings))) > 1
+  if (is.double(item)) {
+    show_missing_values <- length(unique(haven::na_tag(missing_values))) > 1
     item <- haven::zap_missing(item)
   }
   if (length(item_attributes$labels) == 0 && is.numeric(item)) {
@@ -298,9 +400,10 @@ item_nomiss <- item[!is.na(item)]
 # unnest mc_multiple and so on
 if (
   is.character(item_nomiss) &&
-  stringr::str_detect(item_nomiss, stringr::fixed(", ")) &&
+  any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
   (exists("type", item_info) && 
-    stringr::str_detect(item_info$type, pattern = stringr::fixed("multiple")))
+    any(stringr::str_detect(item_info$type, 
+                            pattern = stringr::fixed("multiple"))))
   ) {
   item_nomiss <- unlist(stringr::str_split(item_nomiss, pattern = stringr::fixed(", ")))
 }
@@ -347,9 +450,9 @@ df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missings------------------------------------------------------------
-if (show_missings) {
-  plot_labelled(missings, item_name, wrap_at)
+## ----missing_values------------------------------------------------------
+if (show_missing_values) {
+  plot_labelled(missing_values, item_name, wrap_at)
 }
 
 ## ----item_info-----------------------------------------------------------
@@ -382,16 +485,17 @@ if (exists("testing")) {
 }
 
 ## ----missingness_all_setup-----------------------------------------------
-if (  exists("ended", results) &&
-  exists("expired", results)) {
-  finisher_results <- dplyr::filter(results, !is.na(.data$ended))
-} else {
-  finisher_results <- results
+if (!exists("ended", results) ||
+  !exists("expired", results)) {
   warning("Could not figure out who finished the surveys, because the ",
           "variables expired and ended were missing.")
 }
 if (length(md_pattern)) {
-  pander::pander(md_pattern)
+  if (knitr::is_html_output()) {
+    rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
+  } else {
+    knitr::kable(md_pattern)
+  }
 }
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
@@ -403,9 +507,13 @@ if (exists("testing")) {
 	survey_repetition <- 'single'
 	reliabilities <- list()
 	missingness_report <- ''
+	data_info <- '' 
 	survey_overview <- '' 
 	scales_items <- c()
 }
+
+## ------------------------------------------------------------------------
+knitr::asis_output(data_info)
 
 ## ------------------------------------------------------------------------
 knitr::asis_output(survey_overview)

@@ -2,21 +2,21 @@
 #'
 #' SPSS users frequently label their missing values, but don't set them as missing.
 #' This function will rectify that for negative values and for the values 99 and 999 (only if they're 5*MAD away from the median).
-#' Using different settings, you can also easily tag other missings.
+#' Using different settings, you can also easily tag other missing values.
 #'
-#' @param data the data frame with labelled missings
-#' @param only_labelled_missings don't set values to missing if there's no label for them
+#' @param data the data frame with labelled missing values
+#' @param only_labelled don't set values to missing if there's no label for them
 #' @param negative_values_are_missing by default we label negative values as missing
 #' @param ninety_nine_problems SPSS users often store values as 99/999, should we do this for values with 5*MAD of the median
-#' @param learn_from_labels if there are labels for missings of the form `[-1] no answer`, set -1 in the data to the corresponding tagged missing
+#' @param learn_from_labels if there are labels for missing values of the form `[-1] no answer`, set -1 in the data to the corresponding tagged missing
 #' @param missing also set these values to missing (or enforce for 99/999 within 5*MAD)
 #' @param non_missing don't set these values to missing
 #' @param vars only edit these variables
-#' @param use_labelled_spss the labelled_spss class has a few drawbacks. Since R can't store missings like -1 and 99, we're replacing them with letters unless this option is enabled. If you prefer to keep your -1 etc, turn this on.
+#' @param use_labelled_spss the labelled_spss class has a few drawbacks. Since R can't store missing values like -1 and 99, we're replacing them with letters unless this option is enabled. If you prefer to keep your -1 etc, turn this on.
 #'
 #' @export
 #'
-detect_missings <- function(data, only_labelled_missings = TRUE,
+detect_missing <- function(data, only_labelled = TRUE,
                                     negative_values_are_missing = TRUE,
                                     ninety_nine_problems = TRUE,
                                     learn_from_labels = TRUE,
@@ -28,9 +28,9 @@ detect_missings <- function(data, only_labelled_missings = TRUE,
     if (is.numeric(data[[ var ]]) && any(!is.na(data[[ var ]]))) {
 
       # negative values
-      potential_missings <- c()
+      potential_missing_values <- c()
       if (negative_values_are_missing) {
-        potential_missings <- unique(data[[var]][data[[var]] < 0])
+        potential_missing_values <- unique(data[[var]][data[[var]] < 0])
       }
       labels <- attributes(data[[var]])$labels
 
@@ -39,10 +39,10 @@ detect_missings <- function(data, only_labelled_missings = TRUE,
           stringr::str_match(names(labels), "\\[([0-9-]+)\\]")[, 2])
         potentially_untagged <- numeric_representations[is.na(labels)]
         potential_tags <- labels[is.na(labels)]
-        if (!all(is.na(haven::na_tag(data[[var]]))) &&
+        if (is.double(data[[var]]) && !all(is.na(haven::na_tag(data[[var]]))) &&
             length(intersect(potentially_untagged, data[[var]]))) {
-          warning("There were already tagged missings in ", var, ". Although",
-                  "there were further potential missings as indicated by",
+          warning("Missing values were already tagged in ", var, ". Although",
+                  "there were further potential missing values as indicated by",
                   "missing labels, this was not changed.")
         } else {
           for (e in seq_along(potentially_untagged)) {
@@ -51,68 +51,82 @@ detect_missings <- function(data, only_labelled_missings = TRUE,
           }
         }
       }
-      # classic SPSS missings only if they are far out of real data range
+      # classic SPSS missing values only if they are far out of real data range
       # can be turned off using non_missing or ninety_nine_problems
       if (ninety_nine_problems) {
         if (any(!is.na(data[[ var ]])) &&
             (stats::median(data[[var]], na.rm = TRUE) +
              stats::mad(data[[var]], na.rm = TRUE) * 5) < 99) {
-          potential_missings <- c(potential_missings, 99)
+          potential_missing_values <- c(potential_missing_values, 99)
         }
         if (any(!is.na(data[[ var ]])) &&
             (stats::median(data[[var]], na.rm = TRUE) +
              stats::mad(data[[var]], na.rm = TRUE) * 5) < 999) {
-          potential_missings <- c(potential_missings, 999)
+          potential_missing_values <- c(potential_missing_values, 999)
         }
       }
-      potential_missings <- union(
-        setdiff(potential_missings, non_missing),
+      potential_missing_values <- union(
+        setdiff(potential_missing_values, non_missing),
         missing)
-      if ((!only_labelled_missings || haven::is.labelled(data[[var]])) &&
-          length(potential_missings) > 0) {
-        if (only_labelled_missings) {
-          potential_missings <- potential_missings[
-            potential_missings %in% labels]
-          # add labelled missings that don't exist for completeness
-          potential_missings <- union(potential_missings,
-            setdiff(labels, data[[var]]))
+      if ((!only_labelled || haven::is.labelled(data[[var]])) &&
+          length(potential_missing_values) > 0) {
+        if (only_labelled) {
+          potential_missing_values <- potential_missing_values[
+            potential_missing_values %in% labels]
+          # add labelled missing_values that don't exist for completeness
+          potential_missing_values <- union(potential_missing_values,
+            setdiff(labels[is.na(labels)], data[[var]]))
         }
-        potential_missings <- sort(potential_missings)
+        potential_missing_values <- sort(potential_missing_values)
         with_tagged_na <- data[[var]]
-        free_na_tags <- setdiff( letters, haven::na_tag(with_tagged_na))
+        if (is.double(data[[var]])) {
+          free_na_tags <- setdiff( letters, haven::na_tag(with_tagged_na))
+        } else {
+          free_na_tags <- letters
+        }
 
-        for (i in seq_along(potential_missings)) {
-          miss <- potential_missings[i]
+        for (i in seq_along(potential_missing_values)) {
+          miss <- potential_missing_values[i]
 
           if (!use_labelled_spss &&
-              !all(potential_missings %in% free_na_tags)) {
+              !all(potential_missing_values %in% free_na_tags)) {
             new_miss <- free_na_tags[i]
           } else {
-            new_miss <- potential_missings[i]
+            new_miss <- potential_missing_values[i]
           }
           that_label <- which(labels == miss)
-          if (!use_labelled_spss) {
+          if (length(which(with_tagged_na == miss)) &&
+              is.double(data[[var]]) && !use_labelled_spss) {
               with_tagged_na[
                 which(with_tagged_na == miss)] <- haven::tagged_na(new_miss)
+          } else if (is.integer(data[[var]])) {
+            warning("Cannot label missings for integers in variable ", var)
           }
-          if (length(that_label) && !use_labelled_spss) {
+          if (is.double(data[[var]]) && length(that_label) &&
+              !use_labelled_spss) {
             labels[that_label] <- haven::tagged_na(new_miss)
-            names(labels)[that_label] <- paste0("[", potential_missings[i],
+            names(labels)[that_label] <- paste0("[",
+                                  potential_missing_values[i],
                                       "] ", names(labels)[that_label])
           }
         }
         if (use_labelled_spss) {
           labels <- attributes(data[[var]])$labels
           if (is.null(labels)) {
-            labels <- potential_missings
+            labels <- potential_missing_values
             names(labels) <- "autodetected unlabelled missing"
           }
           data[[var]] <- haven::labelled_spss(data[[var]],
+                                 label = attr(data[[var]], "label", TRUE),
                                  labels = labels,
-                                 na_values = potential_missings,
-                                 na_range = attributes(data[[var]])$na_range)
+                                 na_values = potential_missing_values,
+                                 na_range = attr(data[[var]], "na_range", TRUE)
+                                 )
         } else if (haven::is.labelled(data[[var]])) {
-            data[[var]] <- haven::labelled(with_tagged_na, labels = labels)
+            data[[var]] <- haven::labelled(with_tagged_na,
+                                  label = attr(data[[var]], "label", TRUE),
+                                  labels = labels
+                                  )
         } else {
             data[[var]] <- with_tagged_na
         }
@@ -120,6 +134,18 @@ detect_missings <- function(data, only_labelled_missings = TRUE,
     }
   }
   data
+}
+#' @describeIn detect_missing Deprecated version
+#' @param only_labelled_missings passed to [detect_missing()]
+#' @param ... passed to [detect_missing()]
+#' @inheritParams detect_missing
+#' @export
+detect_missings <- function(data, only_labelled_missings = TRUE,
+                           ...) {
+  .Deprecated("detect_missing", package = "codebook", msg =
+                "We renamed this function so as not to incorrectly pluralise
+the word 'missing'.")
+  detect_missing(data, only_labelled = only_labelled_missings, ...)
 }
 
 #' Rescue lost attributes
@@ -257,32 +283,6 @@ zap_attributes.data.frame <- function(x, attributes = NULL) {
 }
 
 
-#' Zap variable label
-#'
-#' Modelled on [haven::zap_labels()], zaps variable labels (not value labels).
-#'
-#' @param x the data frame or variable
-#'
-#' @export
-#' @examples
-#' x <- haven::labelled(rep(1:5, each = 1), c(Bad = 1, Good = 5))
-#' zap_label(x)
-zap_label <- function(x) {
-  UseMethod("zap_label")
-}
-
-#' @export
-zap_label.data.frame <- function(x) {
-  x[] <- lapply(x, zap_label)
-  x
-}
-
-#' @export
-zap_label.default <- function(x) {
-  attr(x, "label") <- NULL
-  x
-}
-
 
 #' Zap labelled class
 #'
@@ -301,8 +301,17 @@ zap_labelled.data.frame <- function(x) {
 }
 
 #' @export
-zap_labelled.labelled <- function(x) {
-  if (inherits(x, "labelled")) {
+zap_labelled.haven_labelled <- function(x) {
+  if (inherits(x, "haven_labelled")) {
+    unclass(x)
+  } else {
+    x
+  }
+}
+
+#' @export
+zap_labelled.haven_labelled_spss <- function(x) {
+  if (inherits(x, "haven_labelled_spss")) {
     unclass(x)
   } else {
     x
@@ -310,9 +319,8 @@ zap_labelled.labelled <- function(x) {
 }
 
 
-
 #' Reverse labelled values
-#' reverse the underlying valus for a numeric [haven::labelled()] vector while keeping the labels correct
+#' reverse the underlying values for a numeric [haven::labelled()] vector while keeping the labels correct
 #'
 #' @param x a labelled vector
 #' @return return the labelled vector with the underlying values having been reversed
@@ -325,17 +333,27 @@ reverse_labelled_values <- function(x) {
   labels <- attributes(x)$labels
   values <- unname(labels)
   labels <- names(labels)
+  if (is.factor(x) && is.null(labels) && !is.null(attributes(x)$levels)) {
+    warning("Turning a factor into a labelled numeric vector")
+    values <- seq_len(length(attributes(x)$levels))
+    labels <- attributes(x)$levels
+    x <- as.numeric(x)
+  }
+  missing_labels <- labels[is.na(values)]
+  missing_values <- values[is.na(values)]
+  labels <- labels[!is.na(values)]
+  values <- values[!is.na(values)]
   if (
-    sum(!is.na(values)) == 0 ||
-    (any(x > max(values, na.rm = TRUE) |
-          x < min(values, na.rm = TRUE), na.rm = TRUE))) {
+    length(values) == 0 ||
+    (any(x > max(values) |
+          x < min(values), na.rm = TRUE))) {
     warning(deparse(substitute(x)), ": There are values outside the ",
             "labelled range. Reversion will only work if both the minimum ",
             "and maximum of the range are part of the responses.")
   }
   if (length(values) < length(unique(x)) ) {
     # if only some values have labels (e.g. extremes), make sure we include all
-    possible_replies <- union(values, unique(x))
+    possible_replies <- union(values, unique(x[!is.na(x)]))
   } else {
     possible_replies <- values
   }
@@ -343,8 +361,7 @@ reverse_labelled_values <- function(x) {
     warning(deparse(substitute(x)), " is not numeric and cannot be reversed.")
     x
   } else {
-    range <- min(possible_replies, na.rm = TRUE):max(possible_replies,
-                                                     na.rm = TRUE)
+    range <- min(possible_replies):max(possible_replies)
     if (length(possible_replies) <
         length(range)) {
       possible_replies <- range
@@ -353,11 +370,16 @@ reverse_labelled_values <- function(x) {
     possible_replies <- sort(possible_replies)
     recode_replies <- stats::setNames(
       as.list(possible_replies), rev(possible_replies))
-    new_x <- dplyr::recode(as.numeric(x), rlang::UQS(recode_replies))
-    # cbind(new_x,x)
+    new_x <- dplyr::recode(as.numeric(x), !!!recode_replies)
+
     attributes(new_x) <- attributes(x)
-    attributes(new_x)$labels <- stats::setNames(rev(values), labels)
+    attributes(new_x)$labels <- stats::setNames(
+      c(rev(values), missing_values),
+      c(labels, missing_labels))
     new_x
   }
 }
 
+separate_out_missings <- function(x) {
+
+}

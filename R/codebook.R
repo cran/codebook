@@ -84,6 +84,29 @@ codebook <- function(results, reliabilities = NULL,
       paste0(knitr::opts_chunk$get("cache.path"), "cb_", df_name, "_")
   )
 
+  meta <- metadata(results)
+  if (is.null(meta)) {
+    meta <- list()
+  }
+
+  if (!exists("name", meta)) {
+    metadata(results)$name <- deparse(substitute(results))
+  }
+
+  if (!exists("datePublished", meta)) {
+    metadata(results)$datePublished <- Sys.Date()
+  }
+
+  if (!exists("description", meta)) {
+    metadata(results)$description <- data_description_default(results)
+  }
+
+  if (!exists("keywords", meta)) {
+    metadata(results)$keywords <- names(results)
+  }
+
+  data_info <- codebook_data_info(results)
+
   if (survey_overview &&
         exists("session", results) &&
         exists("created", results) &&
@@ -107,7 +130,7 @@ codebook <- function(results, reliabilities = NULL,
       items_contained_in_scales <- c(items_contained_in_scales,
                                      scale_info$scale_item_names, var)
       items <- dplyr::select(results,
-                  rlang::UQS(rlang::quos(scale_info$scale_item_names)))
+                  !!!(rlang::quos(scale_info$scale_item_names)))
       scales_items[[var]] %<-% {tryCatch({
         codebook_component_scale(
           scale = scale, scale_name = var,
@@ -155,6 +178,8 @@ codebook <- function(results, reliabilities = NULL,
     jsonld <- no_md()
   }
 
+
+
   asis_knit_child(require_file("_codebook.Rmd"), options = options)
 }
 
@@ -180,6 +205,10 @@ codebook_survey_overview <- function(results, survey_repetition = "single",
   stopifnot(exists("modified", results))
   stopifnot(exists("expired", results))
   stopifnot(exists("ended", results))
+  # stopifnot(is(results$created, "POSIXct"))
+  # stopifnot(is(results$modified, "POSIXct"))
+  # stopifnot(is(results$expired, "POSIXct"))
+  # stopifnot(is(results$ended, "POSIXct"))
 
   users <- dplyr::n_distinct(results$session)
   finished_users <- dplyr::n_distinct(results[!is.na(results$ended),]$session)
@@ -211,6 +240,33 @@ codebook_survey_overview <- function(results, survey_repetition = "single",
   asis_knit_child(require_file("_codebook_survey_overview.Rmd"),
                   options = options)
 }
+
+#' Codebook data info
+#'
+#' A readout of the metadata for this dataset, with some defaults set
+#'
+#' @param results a data frame which has the following columns: session, created, modified, expired, ended
+#' @param indent add # to this to make the headings in the components lower-level. defaults to beginning at h2
+#'
+#' @export
+#' @examples
+#' # will generate figures in a figure/ subdirectory
+#' data("bfi")
+#' metadata(bfi)$name <- "MOCK Big Five Inventory dataset (German metadata demo)"
+#' metadata(bfi)$description <- "a small mock Big Five Inventory dataset"
+#' metadata(bfi)$citation <- "doi:10.5281/zenodo.1326520"
+#' metadata(bfi)$url <-
+#'    "https://rubenarslan.github.io/codebook/articles/codebook.html"
+#' codebook_data_info(bfi)
+codebook_data_info <- function(results, indent = "##") {
+  options <- list(
+    fig.path = paste0(knitr::opts_chunk$get("fig.path"), "data_info_"),
+    cache.path = paste0(knitr::opts_chunk$get("cache.path"), "data_info_")
+  )
+  asis_knit_child(require_file("_codebook_data_info.Rmd"),
+                  options = options)
+}
+
 
 
 #' Codebook missingness
@@ -250,7 +306,7 @@ metadata_jsonld <- function(results) {
     fig.path = paste0(knitr::opts_chunk$get("fig.path"), "metadata_"),
     cache.path = paste0(knitr::opts_chunk$get("cache.path"), "metadata_")
   )
-  metadata <- metadata_list(results)
+  jsonld_metadata <- metadata_list(results)
   asis_knit_child(require_file("_metadata_jsonld.Rmd"), options = options)
 }
 
@@ -386,7 +442,7 @@ codebook_component_single_item <- function(item, item_name, indent = '##') {
 #' codebook_table(bfi)
 codebook_table <- function(results) {
   skimmed <- skim_to_wide_labelled(results)
-  metadata <- metadata(results)
+  metadata <- gather_variable_metadata(results)
 
   metadata <- dplyr::left_join(metadata,
                                dplyr::rename(skimmed, data_type = .data$type),
@@ -404,11 +460,11 @@ codebook_table <- function(results) {
               setdiff(names(metadata), order)), # include other cols
                c("choice_list"))
 
-  metadata <- dplyr::select(metadata,  rlang::UQS(rlang::quos(cols)))
+  metadata <- dplyr::select(metadata,  !!!rlang::quos(cols))
   dplyr::select_if(metadata, not_all_na )
 }
 
-metadata <- function(results) {
+gather_variable_metadata <- function(results) {
     metadata <- purrr::map_dfr(results, attribute_summary, .id = "name")
     stopifnot(nrow(metadata) == ncol(results))
     metadata
@@ -467,7 +523,7 @@ attribute_summary <- function(var) {
   if (ncol(x) == 0) {
     x <- data.frame(label = NA_character_, stringsAsFactors = FALSE)
   }
-  x
+  dplyr::mutate_all(x, as.character)
 }
 
 
@@ -476,28 +532,30 @@ attribute_summary <- function(var) {
 #' Returns a list containing variable metadata (attributes) and data summaries.
 #'
 #' @param results a data frame, ideally with attributes set on variables
+#' @param only_existing whether to drop helpful metadata to comply with the list
+#' of currently defined schema.org properties
 #'
 #' @export
 #' @examples
 #' data("bfi")
 #' md_list <- metadata_list(bfi)
 #' md_list$variableMeasured[[20]]
-metadata_list <- function(results) {
-  name <- deparse(substitute(results))
-  metadata <- attributes(results)
-  metadata$names <- NULL
-  metadata$row.names <- NULL
-  metadata$class <- NULL
-
-  if (!exists("name", metadata)) {
-    metadata$name <- name
+metadata_list <- function(results, only_existing = TRUE) {
+  metadata <- metadata(results)
+  if (is.null(metadata)) {
+    metadata <- list()
   }
 
-  if (!exists("keywords", metadata)) {
-    metadata$keywords <- names(results)
+  if (!exists("@context", metadata)) {
+    metadata[["@context"]] <- "http://schema.org/"
   }
 
-  metadata$variableMeasured <- lapply(names(results), function(var) {
+  if (!exists("@type", metadata)) {
+    metadata[["@type"]] <- "Dataset"
+  }
+
+  if (!exists("variableMeasured", metadata)) {
+    metadata$variableMeasured <- lapply(names(results), function(var) {
       x <- attributes(results[[var]])
       x$name <- var
 
@@ -514,12 +572,29 @@ metadata_list <- function(results) {
           x$description <- x$label
           x$label <- NULL
         }
-        if (exists("labels", x)) {
-          x$value <- as.list(x$labels)
-          # x$value[["@type"]] = "StructuredValue"
+
+        if (exists("levels", x)) {
+          x$value <- paste(paste0(seq_len(length(x$levels)), ". ", x$levels),
+                                  collapse = ",\n")
+          x$levels <- NULL
+          # remove extremely deep qualtrics choices attributes
+          if (exists("item", x) && exists("choices", x$item)
+              && exists("variableName", x$item$choices[[1]])) {
+            x$item$choices <- NULL
+          }
+        } else if (exists("labels", x)) {
+          if (!is.null(names(x$labels))) {
+            x$value <- paste(paste0(x$labels, ". ", names(x$labels)),
+                                    collapse = ",\n")
+          } else {
+            x$value <- paste(x$labels, collapse = ",\n")
+          }
           x$maxValue <- max(x$labels, na.rm = TRUE)
           x$minValue <- min(x$labels, na.rm = TRUE)
           x$labels <- NULL
+          if (exists("item", x) && exists("choices", x$item)) {
+            x$item$choices <- NULL
+          }
         }
         if (exists("item", x)) {
           if (exists("type", x$item)) {
@@ -527,39 +602,100 @@ metadata_list <- function(results) {
             x$item$type <- NULL
           }
           if (exists("choices", x$item)) {
-            x$item$choices[["@type"]] <- "http://formr.org/codebook/ItemChoices"
+            x$item$choices[["@type"]] <-
+              "http://rubenarslan.github.io/codebook/ItemChoices"
           }
           x$measurementTechnique <- "self-report"
-          x$item[["@type"]] <- "http://formr.org/codebook/Item"
+          x$item[["@type"]] <- "http://rubenarslan.github.io/codebook/Item"
         }
+      }
+      if (!only_existing) {
 
-      }
-      x$data_summary <- skim_to_wide_labelled(results[[var]])
-      x$data_summary$variable <- NULL
-      if (exists("type", x$data_summary)) {
-        if (!exists("value", x)) {
-          x$value <- switch(x$data_summary$type,
-              character = "text",
-              integer = "Number",
-              numeric = "Number",
-              factor = "StructuredValue",
-              labelled = "StructuredValue"
-          )
+        x$data_summary <- skim_to_wide_labelled(results[[var]])
+        x$data_summary$variable <- NULL
+        if (exists("type", x$data_summary)) {
+          if (!exists("value", x)) {
+            x$value <- switch(x$data_summary$type,
+                character = "text",
+                integer = "Number",
+                numeric = "Number",
+                factor = "StructuredValue",
+                labelled = "StructuredValue"
+            )
+          }
+          x$data_summary$type <- NULL
         }
-        x$data_summary$type <- NULL
+        x$data_summary[["@type"]] <-
+          "http://rubenarslan.github.io/codebook/SummaryStatistics"
       }
-      x$data_summary[["@type"]] <- "http://formr.org/codebook/SummaryStatistics"
-      x[["@context"]] <- list("@vocab" = "http://pending.schema.org/")
+
+      if (only_existing) {
+        x <- x[intersect(names(x), legal_property_value_properties)]
+      }
+
       x[["@type"]] <- "propertyValue"
       x
     })
+  }
 
-  metadata[["@context"]] <- "http://schema.org/"
-  metadata[["@type"]] <- "Dataset"
+
+  if (only_existing) {
+    dict <- codebook_table(results)
+    dict <- knitr::kable(dict, format = "markdown")
+    dict <- stringr::str_replace_all(dict, "\n", " - ")
+    dict <- paste0(as.character(dict), collapse = "\n")
+    metadata$description <- paste0(metadata$description, "\n\n\n",
+      glue::glue(
+      "
+    ## Table of variables
+    This table contains variable names, labels, their central tendencies and other attributes.
+
+    {dict}
+
+    ### Note
+    This dataset was automatically described using the [codebook R package](https://rubenarslan.github.io/codebook/).
+    ",
+      dict = dict))
+    metadata <- metadata[intersect(names(metadata), legal_dataset_properties)]
+  }
 
   metadata
 }
 
+legal_dataset_properties <-
+  c("@type", "@context",
+    "distribution", "includedInDataCatalog", "issn", "measurementTechnique",
+    "variableMeasured", "about", "accessMode", "accessModeSufficient",
+    "accessibilityAPI", "accessibilityControl", "accessibilityFeature",
+    "accessibilityHazard", "accessibilitySummary", "accountablePerson",
+    "aggregateRating", "alternativeHeadline", "associatedMedia", "audience",
+    "audio", "author", "award", "character", "citation", "comment",
+    "commentCount", "contentLocation", "contentRating", "contentReferenceTime",
+    "contributor", "copyrightHolder", "copyrightYear", "correction", "creator",
+    "dateCreated", "dateModified", "datePublished", "discussionUrl", "editor",
+    "educationalAlignment", "educationalUse", "encoding", "encodingFormat",
+    "exampleOfWork", "expires", "funder", "genre", "hasPart", "headline",
+    "inLanguage", "interactionStatistic", "interactivityType",
+    "isAccessibleForFree", "isBasedOn", "isFamilyFriendly", "isPartOf",
+    "keywords", "learningResourceType", "license", "locationCreated",
+    "mainEntity", "material", "mentions", "offers", "position", "producer",
+    "provider", "publication", "publisher", "publisherImprint",
+    "publishingPrinciples", "recordedAt", "releasedEvent", "review",
+    "schemaVersion", "sdDatePublished", "sdLicense", "sdPublisher",
+    "sourceOrganization", "spatialCoverage", "sponsor", "temporalCoverage",
+    "text", "thumbnailUrl", "timeRequired", "translationOfWork",
+    "translator", "typicalAgeRange", "version", "video", "workExample",
+    "workTranslation", "additionalType", "alternateName", "description",
+    "disambiguatingDescription", "identifier", "image", "mainEntityOfPage",
+    "name", "potentialAction", "sameAs", "subjectOf", "url")
+
+legal_property_value_properties <-
+  c("@type", "@context",
+    "maxValue", "measurementTechnique", "minValue", "propertyID", "unitCode",
+    "unitText", "value", "valueReference", "additionalType", "alternateName",
+    "description", "disambiguatingDescription", "identifier", "image",
+    "mainEntityOfPage", "name", "potentialAction", "sameAs", "subjectOf",
+    "url", "additionalProperty", "exifData", "identifier", "valueReference")
 
 skim_to_wide_labelled <- function(x, ...) {
   x <- haven::zap_labels(x)

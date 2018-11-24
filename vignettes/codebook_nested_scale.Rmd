@@ -31,7 +31,7 @@ is the same, irrespective of whether scales already exist. We use the same
 mock BFI dataset from the main vignette here.
 
 Here, we use the function `aggregate_and_document_scale` to build the "alpha"
-scale. We assign `alpha` to a new colum in the data frame and we pass the constituent
+scale. We assign `alpha` to a new column in the data frame and we pass the constituent
 items as a data.frame to the function on the right-hand side. Because alpha
 relates to emotional stability, not neuroticism, we reverse the neuroticism
 items before averaging them with the rest.
@@ -74,7 +74,27 @@ bfi <- bfi %>% select(beta, starts_with("BFIK_extra"), starts_with("BFIK_open"))
 if (!knit_by_pkgdown) knitr::opts_chunk$set(echo = FALSE)
 ```
 
+```{r}
+metadata(bfi)$name <- "MOCK Big Five Inventory dataset (German metadata demo)"
+metadata(bfi)$description <- "a small mock Big Five Inventory dataset"
+metadata(bfi)$identifier <- "doi:10.5281/zenodo.1326520"
+metadata(bfi)$datePublished <- "2016-06-01"
+metadata(bfi)$creator <- list(
+      "@type" = "Person",
+      givenName = "Ruben", familyName = "Arslan",
+      email = "ruben.arslan@gmail.com", 
+      affiliation = list("@type" = "Organization",
+        name = "MPI Human Development, Berlin"))
+metadata(bfi)$citation <- "Arslan (2016). Mock BFI data."
+metadata(bfi)$url <- "https://rubenarslan.github.io/codebook/articles/codebook.html"
+metadata(bfi)$temporalCoverage <- "2016" 
+metadata(bfi)$spatialCoverage <- "Goettingen, Germany" 
+```
 
+```{r}
+# We don't want to look at the code in the codebook.
+knitr::opts_chunk$set(warning = TRUE, message = TRUE, echo = FALSE)
+```
 
 ```{r cb}
 codebook(bfi, survey_repetition = 'single',

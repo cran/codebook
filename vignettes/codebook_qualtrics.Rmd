@@ -35,7 +35,7 @@ results <- readRDS(system.file("extdata", "ryan.rds", package = "codebook"))
 metadata_ex <- readRDS(system.file("extdata", "metadata.rds", package = "codebook"))
 ```
 
-Now, we want the metadata not to be just independet of the data frame.
+Now, we want the metadata not to be just independent of the data frame.
 It's easier to change metadata if it is in the form of a list at the 
 dataset level, so let's use `rio::gather_attrs` for that.
 
@@ -83,6 +83,27 @@ of Qualtrics than I have.
 
 Owing to a bug in pander, the deeply nested attribute structure is currently not shown
 as a nice list.
+
+```{r}
+metadata(results)$name <- "MOCK Qualtrics dataset"
+metadata(results)$description <- "a MOCK dataset used to show how to import Qualtrics metadata into the codebook R package"
+metadata(results)$identifier <- "doi:10.5281/zenodo.1326520"
+metadata(results)$datePublished <- "2018-08-01"
+metadata(results)$creator <- list(
+      "@type" = "Person",
+      givenName = "Ruben", familyName = "Arslan",
+      email = "ruben.arslan@gmail.com", 
+      affiliation = list("@type" = "Organization",
+        name = "MPI Human Development, Berlin"))
+metadata(results)$url <- "https://rubenarslan.github.io/codebook/articles/codebook_qualtrics.html"
+metadata(results)$temporalCoverage <- "2018" 
+metadata(results)$spatialCoverage <- "Nowhere" 
+```
+
+```{r}
+# We don't want to look at the code in the codebook.
+knitr::opts_chunk$set(warning = TRUE, message = TRUE, echo = FALSE)
+```
 
 ```{r cb}
 codebook(results, survey_repetition = "single",

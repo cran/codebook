@@ -4,8 +4,14 @@
 \name{reexports}
 \alias{reexports}
 \alias{as_factor}
+\alias{zap_label}
 \alias{var_label}
 \alias{var_label<-}
+\alias{val_label}
+\alias{val_label<-}
+\alias{val_labels}
+\alias{val_labels<-}
+\alias{\%>\%}
 \title{Objects exported from other packages}
 \keyword{internal}
 \description{
@@ -13,8 +19,10 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{haven}{\code{\link[haven]{as_factor}}}
+  \item{dplyr}{\code{\link[dplyr]{\%>\%}}}
 
-  \item{labelled}{\code{\link[labelled]{var_label}}, \code{\link[labelled]{var_label<-}}}
+  \item{haven}{\code{\link[haven]{as_factor}}, \code{\link[haven]{zap_label}}}
+
+  \item{labelled}{\code{\link[labelled]{var_label}}, \code{\link[labelled]{var_label<-}}, \code{\link[labelled]{val_label}}, \code{\link[labelled]{val_label<-}}, \code{\link[labelled]{val_labels}}, \code{\link[labelled]{val_labels<-}}}
 }}
 

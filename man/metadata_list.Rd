@@ -4,10 +4,13 @@
 \alias{metadata_list}
 \title{Metadata from dataframe}
 \usage{
-metadata_list(results)
+metadata_list(results, only_existing = TRUE)
 }
 \arguments{
 \item{results}{a data frame, ideally with attributes set on variables}
+
+\item{only_existing}{whether to drop helpful metadata to comply with the list
+of currently defined schema.org properties}
 }
 \description{
 Returns a list containing variable metadata (attributes) and data summaries.
