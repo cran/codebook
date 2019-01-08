@@ -1,4 +1,5 @@
-## ----setup---------------------------------------------------------------
+## ----message = FALSE-----------------------------------------------------
+knit_by_pkgdown <- !is.null(knitr::opts_chunk$get("fig.retina"))
 knitr::opts_chunk$set(
   warning = TRUE, # show warnings during codebook generation
   message = TRUE, # show messages during codebook generation
@@ -1179,24 +1180,6 @@ if (!exists("indent")) {
 }
 if (exists("testing")) {
 	results <- data.frame()
-	metadata_table = data.frame()
-}
-
-## ----items, message=TRUE-------------------------------------------------
-export_table(metadata_table)
-
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
-if (exists("testing")) {
-	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
-	results = data.frame()
-}
-
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
-if (!exists("indent")) {
-	indent <- '#' # ugly hack
-}
-if (exists("testing")) {
-	results <- data.frame()
 	survey_repetition <- 'single'
 	reliabilities <- list()
 	missingness_report <- ''
@@ -1223,6 +1206,12 @@ items
 ## ------------------------------------------------------------------------
 jsonld
 
-## ----echo = FALSE, warning = FALSE---------------------------------------
-codebook(codebook_data)
+## ----cb------------------------------------------------------------------
+codebook(codebook_data, survey_repetition = "single", indent = "##",
+         metadata_table = knit_by_pkgdown, metadata_json = knit_by_pkgdown)
+
+## ------------------------------------------------------------------------
+if (!knit_by_pkgdown) {
+  codebook:::escaped_table(codebook_table(codebook_data))
+}
 

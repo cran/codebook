@@ -12,7 +12,7 @@
 
 <meta name="author" content="Ruben Arslan" />
 
-<meta name="date" content="2018-12-04" />
+<meta name="date" content="2019-01-08" />
 
 <title>Codebook example with manual labelling</title>
 
@@ -44,7 +44,7 @@ display: none;
 padding: 0 4px 0 4px;
 }
 .pagedtable .even {
-background-color: #fcfcfc;
+background-color: rgba(140, 140, 140, 0.1);
 }
 .pagedtable-padding-col {
 display: none;
@@ -1290,7 +1290,7 @@ window.onload = function() {
 
 
 <style type="text/css">code{white-space: pre;}</style>
-<style type="text/css">
+<style type="text/css" data-origin="pandoc">
 a.sourceLine { display: inline-block; line-height: 1.25; }
 a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
 a.sourceLine:empty { height: 1.2em; }
@@ -1352,7 +1352,29 @@ code span.st { color: #4070a0; } /* String */
 code span.va { color: #19177c; } /* Variable */
 code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
 </style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
 
 
 
@@ -1549,7 +1571,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <h1 class="title toc-ignore">Codebook example with manual labelling</h1>
 <h4 class="author"><em>Ruben Arslan</em></h4>
-<h4 class="date"><em>2018-12-04</em></h4>
+<h4 class="date"><em>2019-01-08</em></h4>
 
 
 
@@ -1591,25 +1613,25 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 ## 18     5     5     5     4     5     5     5     5     4     3     2     2
 ## 19     4     4     5     4     3     5     4     5     4     6     1     2
 ## 20     4     4     6     5     5     1     1     1     5     6     1     1
-## # ... with 16 more variables: E3 &lt;int&gt;, E4 &lt;int&gt;, E5 &lt;int&gt;, N1 &lt;int&gt;,
+## # … with 16 more variables: E3 &lt;int&gt;, E4 &lt;int&gt;, E5 &lt;int&gt;, N1 &lt;int&gt;,
 ## #   N2 &lt;int&gt;, N3 &lt;int&gt;, N4 &lt;int&gt;, N5 &lt;int&gt;, O1 &lt;int&gt;, O2 &lt;int&gt;, O3 &lt;int&gt;,
 ## #   O4 &lt;int&gt;, O5 &lt;int&gt;, gender &lt;int&gt;, education &lt;int&gt;, age &lt;int&gt;</code></pre>
 <p>and our data dictionary.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1">bfi.dictionary</a></code></pre></div>
 <pre><code>## # A tibble: 28 x 8
-##    variable ItemLabel Item         Giant3 Big6    Little12  Keying IPIP100
-##    &lt;chr&gt;    &lt;fct&gt;     &lt;fct&gt;        &lt;fct&gt;  &lt;fct&gt;   &lt;fct&gt;      &lt;int&gt; &lt;fct&gt;  
-##  1 A1       q_146     Am indiffer… Cohes… Agreea… Compassi…     -1 B5:A   
-##  2 A2       q_1162    Inquire abo… Cohes… Agreea… Compassi…      1 B5:A   
-##  3 A3       q_1206    Know how to… Cohes… Agreea… Compassi…      1 B5:A   
-##  4 A4       q_1364    Love childr… Cohes… Agreea… Compassi…      1 B5:A   
-##  5 A5       q_1419    Make people… Cohes… Agreea… Compassi…      1 B5:A   
-##  6 C1       q_124     Am exacting… Stabi… Consci… Orderlin…      1 B5:C   
-##  7 C2       q_530     Continue un… Stabi… Consci… Orderlin…      1 B5:C   
-##  8 C3       q_619     Do things a… Stabi… Consci… Orderlin…      1 B5:C   
-##  9 C4       q_626     Do things i… Stabi… Consci… Industri…     -1 B5:C   
-## 10 C5       q_1949    Waste my ti… Stabi… Consci… Industri…     -1 B5:C   
-## # ... with 18 more rows</code></pre>
+##    variable ItemLabel Item         Giant3  Big6    Little12  Keying IPIP100
+##    &lt;chr&gt;    &lt;fct&gt;     &lt;fct&gt;        &lt;fct&gt;   &lt;fct&gt;   &lt;fct&gt;      &lt;int&gt; &lt;fct&gt;  
+##  1 A1       q_146     Am indiffer… Cohesi… Agreea… Compassi…     -1 B5:A   
+##  2 A2       q_1162    Inquire abo… Cohesi… Agreea… Compassi…      1 B5:A   
+##  3 A3       q_1206    Know how to… Cohesi… Agreea… Compassi…      1 B5:A   
+##  4 A4       q_1364    Love childr… Cohesi… Agreea… Compassi…      1 B5:A   
+##  5 A5       q_1419    Make people… Cohesi… Agreea… Compassi…      1 B5:A   
+##  6 C1       q_124     Am exacting… Stabil… Consci… Orderlin…      1 B5:C   
+##  7 C2       q_530     Continue un… Stabil… Consci… Orderlin…      1 B5:C   
+##  8 C3       q_619     Do things a… Stabil… Consci… Orderlin…      1 B5:C   
+##  9 C4       q_626     Do things i… Stabil… Consci… Industri…     -1 B5:C   
+## 10 C5       q_1949    Waste my ti… Stabil… Consci… Industri…     -1 B5:C   
+## # … with 18 more rows</code></pre>
 <div id="how-to-add-variable-and-value-labels" class="section level2">
 <h2>How to add variable and value labels</h2>
 <p>Using the <code>var_label</code> function from the <code>labelled</code> package, we can easily assign a label to a variable (or a list of labels to a dataset).</p>
@@ -1620,11 +1642,11 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb6-5" data-line-number="5"></a>
 <a class="sourceLine" id="cb6-6" data-line-number="6">bfi.dictionary <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">tail</span>(<span class="dv">3</span>)</a></code></pre></div>
 <pre><code>## # A tibble: 3 x 8
-##   variable  ItemLabel Item            Giant3 Big6  Little12 Keying IPIP100
-##   &lt;chr&gt;     &lt;fct&gt;     &lt;fct&gt;           &lt;fct&gt;  &lt;fct&gt; &lt;fct&gt;     &lt;int&gt; &lt;fct&gt;  
-## 1 gender    gender    males=1, femal… &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;   
-## 2 education education in HS, fin HS,… &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;   
-## 3 age       age       age in years    &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;</code></pre>
+##   variable  ItemLabel Item             Giant3 Big6  Little12 Keying IPIP100
+##   &lt;chr&gt;     &lt;fct&gt;     &lt;fct&gt;            &lt;fct&gt;  &lt;fct&gt; &lt;fct&gt;     &lt;int&gt; &lt;fct&gt;  
+## 1 gender    gender    males=1, female… &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;   
+## 2 education education in HS, fin HS, … &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;   
+## 3 age       age       age in years     &lt;NA&gt;   &lt;NA&gt;  &lt;NA&gt;         NA &lt;NA&gt;</code></pre>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw">var_label</span>(bfi<span class="op">$</span>gender) &lt;-<span class="st"> &quot;Self-reported gender&quot;</span></a>
 <a class="sourceLine" id="cb8-2" data-line-number="2"><span class="kw">attributes</span>(bfi<span class="op">$</span>gender) <span class="co"># check what we're doing</span></a></code></pre></div>
 <pre><code>## $label
