@@ -164,7 +164,7 @@ pander::pander(meta)
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
-	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
 if (exists("testing")) {
 	item <- 1:10
@@ -172,7 +172,8 @@ if (exists("testing")) {
 	attributes(item) <- list(label = 'yayya')
 }
 
-item_attributes <- recursive_escape(attributes(item))
+item_attributes <- attributes(item)
+item_attributes <- recursive_escape(item_attributes)
 html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
@@ -202,6 +203,7 @@ item_nomiss <- item[!is.na(item)]
 if (
   is.character(item_nomiss) &&
   any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
+  !is.null(item_info) &&
   (exists("type", item_info) && 
     any(stringr::str_detect(item_info$type, 
                             pattern = stringr::fixed("multiple"))))
@@ -213,7 +215,8 @@ attributes(item_nomiss) <- attributes(item)
 old_height <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item_nomiss) || many_labels
+go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
+  
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
@@ -227,6 +230,9 @@ if ( go_vertical ) {
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
 	new_height <- ifelse(new_height > 20, 20, new_height)
 	new_height <- ifelse(new_height < 1, 1, new_height)
+	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
+	  new_height <- old_height
+	}
 	knitr::opts_chunk$set(fig.height = new_height)
 }
 
@@ -238,10 +244,17 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: bin rare responses into "other category"
 if (!length(item_nomiss)) {
   cat("No non-missing values to show.")
-} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+} else if (!could_disclose_unique_values(item_nomiss)) {
   plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  if (is.character(item_nomiss)) {
+      char_count <- stringr::str_count(item_nomiss)
+      attributes(char_count)$label <- item_label
+      plot_labelled(char_count, 
+                    item_name, wrap_at, FALSE, trans = "log1p", "characters")
+  } else {
+	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  }
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
@@ -276,7 +289,7 @@ if (!is.null(choices) && length(choices) && length(choices) < 30) {
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
-	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
 if (exists("testing")) {
 	item <- 1:10
@@ -284,7 +297,8 @@ if (exists("testing")) {
 	attributes(item) <- list(label = 'yayya')
 }
 
-item_attributes <- recursive_escape(attributes(item))
+item_attributes <- attributes(item)
+item_attributes <- recursive_escape(item_attributes)
 html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
@@ -314,6 +328,7 @@ item_nomiss <- item[!is.na(item)]
 if (
   is.character(item_nomiss) &&
   any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
+  !is.null(item_info) &&
   (exists("type", item_info) && 
     any(stringr::str_detect(item_info$type, 
                             pattern = stringr::fixed("multiple"))))
@@ -325,7 +340,8 @@ attributes(item_nomiss) <- attributes(item)
 old_height <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item_nomiss) || many_labels
+go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
+  
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
@@ -339,6 +355,9 @@ if ( go_vertical ) {
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
 	new_height <- ifelse(new_height > 20, 20, new_height)
 	new_height <- ifelse(new_height < 1, 1, new_height)
+	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
+	  new_height <- old_height
+	}
 	knitr::opts_chunk$set(fig.height = new_height)
 }
 
@@ -350,10 +369,17 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: bin rare responses into "other category"
 if (!length(item_nomiss)) {
   cat("No non-missing values to show.")
-} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+} else if (!could_disclose_unique_values(item_nomiss)) {
   plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  if (is.character(item_nomiss)) {
+      char_count <- stringr::str_count(item_nomiss)
+      attributes(char_count)$label <- item_label
+      plot_labelled(char_count, 
+                    item_name, wrap_at, FALSE, trans = "log1p", "characters")
+  } else {
+	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  }
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
@@ -388,7 +414,7 @@ if (!is.null(choices) && length(choices) && length(choices) < 30) {
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
-	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
 if (exists("testing")) {
 	item <- 1:10
@@ -396,7 +422,8 @@ if (exists("testing")) {
 	attributes(item) <- list(label = 'yayya')
 }
 
-item_attributes <- recursive_escape(attributes(item))
+item_attributes <- attributes(item)
+item_attributes <- recursive_escape(item_attributes)
 html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
@@ -426,6 +453,7 @@ item_nomiss <- item[!is.na(item)]
 if (
   is.character(item_nomiss) &&
   any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
+  !is.null(item_info) &&
   (exists("type", item_info) && 
     any(stringr::str_detect(item_info$type, 
                             pattern = stringr::fixed("multiple"))))
@@ -437,7 +465,8 @@ attributes(item_nomiss) <- attributes(item)
 old_height <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item_nomiss) || many_labels
+go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
+  
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
@@ -451,6 +480,9 @@ if ( go_vertical ) {
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
 	new_height <- ifelse(new_height > 20, 20, new_height)
 	new_height <- ifelse(new_height < 1, 1, new_height)
+	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
+	  new_height <- old_height
+	}
 	knitr::opts_chunk$set(fig.height = new_height)
 }
 
@@ -462,10 +494,17 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: bin rare responses into "other category"
 if (!length(item_nomiss)) {
   cat("No non-missing values to show.")
-} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+} else if (!could_disclose_unique_values(item_nomiss)) {
   plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  if (is.character(item_nomiss)) {
+      char_count <- stringr::str_count(item_nomiss)
+      attributes(char_count)$label <- item_label
+      plot_labelled(char_count, 
+                    item_name, wrap_at, FALSE, trans = "log1p", "characters")
+  } else {
+	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  }
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
@@ -500,7 +539,7 @@ if (!is.null(choices) && length(choices) && length(choices) < 30) {
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
-	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
 if (exists("testing")) {
 	item <- 1:10
@@ -508,7 +547,8 @@ if (exists("testing")) {
 	attributes(item) <- list(label = 'yayya')
 }
 
-item_attributes <- recursive_escape(attributes(item))
+item_attributes <- attributes(item)
+item_attributes <- recursive_escape(item_attributes)
 html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
@@ -538,6 +578,7 @@ item_nomiss <- item[!is.na(item)]
 if (
   is.character(item_nomiss) &&
   any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
+  !is.null(item_info) &&
   (exists("type", item_info) && 
     any(stringr::str_detect(item_info$type, 
                             pattern = stringr::fixed("multiple"))))
@@ -549,7 +590,8 @@ attributes(item_nomiss) <- attributes(item)
 old_height <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item_nomiss) || many_labels
+go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
+  
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
@@ -563,6 +605,9 @@ if ( go_vertical ) {
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
 	new_height <- ifelse(new_height > 20, 20, new_height)
 	new_height <- ifelse(new_height < 1, 1, new_height)
+	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
+	  new_height <- old_height
+	}
 	knitr::opts_chunk$set(fig.height = new_height)
 }
 
@@ -574,10 +619,17 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: bin rare responses into "other category"
 if (!length(item_nomiss)) {
   cat("No non-missing values to show.")
-} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+} else if (!could_disclose_unique_values(item_nomiss)) {
   plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  if (is.character(item_nomiss)) {
+      char_count <- stringr::str_count(item_nomiss)
+      attributes(char_count)$label <- item_label
+      plot_labelled(char_count, 
+                    item_name, wrap_at, FALSE, trans = "log1p", "characters")
+  } else {
+	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  }
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
@@ -612,7 +664,7 @@ if (!is.null(choices) && length(choices) && length(choices) < 30) {
 
 ## ----setup,eval=TRUE,echo=FALSE------------------------------------------
 if (!exists("indent")) {
-	indent <- '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
+	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
 if (exists("testing")) {
 	item <- 1:10
@@ -620,7 +672,8 @@ if (exists("testing")) {
 	attributes(item) <- list(label = 'yayya')
 }
 
-item_attributes <- recursive_escape(attributes(item))
+item_attributes <- attributes(item)
+item_attributes <- recursive_escape(item_attributes)
 html_item_name <- recursive_escape(item_name)
 item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label), 
                      "", item_attributes$label)
@@ -650,6 +703,7 @@ item_nomiss <- item[!is.na(item)]
 if (
   is.character(item_nomiss) &&
   any(stringr::str_detect(item_nomiss, stringr::fixed(", "))) &&
+  !is.null(item_info) &&
   (exists("type", item_info) && 
     any(stringr::str_detect(item_info$type, 
                             pattern = stringr::fixed("multiple"))))
@@ -661,7 +715,8 @@ attributes(item_nomiss) <- attributes(item)
 old_height <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
-go_vertical <- !is.numeric(item_nomiss) || many_labels
+go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
+  
 if ( go_vertical ) {
   # numeric items are plotted horizontally (because that's what usually expected)
   # categorical items are plotted vertically because we can use the screen real estate better this way
@@ -675,6 +730,9 @@ if ( go_vertical ) {
 	new_height <- 2 + choice_multiplier * length(non_missing_choices)
 	new_height <- ifelse(new_height > 20, 20, new_height)
 	new_height <- ifelse(new_height < 1, 1, new_height)
+	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
+	  new_height <- old_height
+	}
 	knitr::opts_chunk$set(fig.height = new_height)
 }
 
@@ -686,10 +744,17 @@ wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: bin rare responses into "other category"
 if (!length(item_nomiss)) {
   cat("No non-missing values to show.")
-} else if (is.numeric(item_nomiss) || dplyr::n_distinct(item_nomiss) < 20) {
+} else if (!could_disclose_unique_values(item_nomiss)) {
   plot_labelled(item_nomiss, item_name, wrap_at, go_vertical)
 } else {
-	cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  if (is.character(item_nomiss)) {
+      char_count <- stringr::str_count(item_nomiss)
+      attributes(char_count)$label <- item_label
+      plot_labelled(char_count, 
+                    item_name, wrap_at, FALSE, trans = "log1p", "characters")
+  } else {
+	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
+  }
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
@@ -734,11 +799,6 @@ if (exists("testing")) {
 }
 
 ## ----missingness_all_setup-----------------------------------------------
-if (!exists("ended", results) ||
-  !exists("expired", results)) {
-  warning("Could not figure out who finished the surveys, because the ",
-          "variables expired and ended were missing.")
-}
 if (length(md_pattern)) {
   if (knitr::is_html_output()) {
     rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
@@ -759,6 +819,8 @@ if (exists("testing")) {
 	data_info <- '' 
 	survey_overview <- '' 
 	scales_items <- c()
+	detailed_items <- TRUE
+	detailed_scales <- TRUE
 }
 
 ## ------------------------------------------------------------------------
@@ -768,7 +830,9 @@ knitr::asis_output(data_info)
 knitr::asis_output(survey_overview)
 
 ## ----scales--------------------------------------------------------------
-knitr::asis_output(paste0(scales_items, sep = "\n\n\n", collapse = "\n\n\n"))
+if (detailed_variables || detailed_scales) {
+  knitr::asis_output(paste0(scales_items, sep = "\n\n\n", collapse = "\n\n\n"))
+}
 
 ## ------------------------------------------------------------------------
 missingness_report
