@@ -73,6 +73,8 @@ codebook <- function(results, reliabilities = NULL,
   }
 
   df_name <- deparse(substitute(results))
+  df_name <- safe_name(df_name)
+
   old_opt <- options('knitr.duplicate.label')$knitr.duplicate.label
   options(knitr.duplicate.label = 'allow')
   on.exit(options(knitr.duplicate.label = old_opt))
@@ -82,6 +84,8 @@ codebook <- function(results, reliabilities = NULL,
     cache.path =
       paste0(knitr::opts_chunk$get("cache.path"), "cb_", df_name, "_")
   )
+  knitr::opts_chunk$set(fig.path = options$fig.path,
+                        cache.path = options$cache.path)
 
   meta <- metadata(results)
   if (is.null(meta)) {
@@ -355,8 +359,8 @@ metadata_jsonld <- function(results) {
 #' }
 codebook_items <- function(results, indent = "##") {
   options <- list(
-    fig.path = paste0(knitr::opts_chunk$get("fig.path"), "overview_"),
-    cache.path = paste0(knitr::opts_chunk$get("cache.path"), "overview_")
+    fig.path = paste0(knitr::opts_chunk$get("fig.path"), "items_"),
+    cache.path = paste0(knitr::opts_chunk$get("cache.path"), "items_")
   )
   metadata_table <- codebook_table(results)
   metadata_table <- dplyr::mutate(metadata_table,

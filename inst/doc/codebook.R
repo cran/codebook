@@ -186,8 +186,6 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----setup_distribution--------------------------------------------------
-binwidth <- mean(diff(sort(unique(scale))))
-
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
 ## ----distribution--------------------------------------------------------
@@ -301,8 +299,6 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----setup_distribution--------------------------------------------------
-binwidth <- mean(diff(sort(unique(scale))))
-
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
 ## ----distribution--------------------------------------------------------
