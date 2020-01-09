@@ -1,51 +1,56 @@
-## ----message = FALSE-----------------------------------------------------
+## ----message = FALSE----------------------------------------------------------
 knit_by_pkgdown <- !is.null(knitr::opts_chunk$get("fig.retina"))
 knitr::opts_chunk$set(
   warning = TRUE, # show warnings during codebook generation
   message = TRUE, # show messages during codebook generation
   error = TRUE, # do not interrupt codebook generation in case of errors,
-                # usually better for debugging
+                # TRUE is usually better for debugging
   echo = TRUE  # show R code
 )
 ggplot2::theme_set(ggplot2::theme_bw())
 pander::panderOptions("table.split.table", Inf)
 
-## ------------------------------------------------------------------------
+## ----include=FALSE, echo=FALSE------------------------------------------------
+knitr::opts_chunk$set(
+  error = FALSE
+)
+
+## -----------------------------------------------------------------------------
 library(codebook)
 codebook_data <- codebook::bfi
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data <- rio::import("https://osf.io/s87kd/download", "csv")
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 attributes(codebook_data$C5)$label <- "Waste my time."
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 library(labelled)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 
 var_label(codebook_data$C5) <- "Waste my time."
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 val_labels(codebook_data$C1) <- c("Very Inaccurate" = 1, "Very Accurate" = 6)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 dict <- rio::import("https://osf.io/cs678/download", "csv")
 
-## ---- warning=FALSE, message=FALSE---------------------------------------
+## ---- warning=FALSE, message=FALSE--------------------------------------------
 library(dplyr)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 var_label(codebook_data) <- list(
 		C5 = "Waste my time.", 
 		C1 = "Am exacting in my work."
 )
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 var_label(codebook_data) <- dict %>% select(variable, label) %>% dict_to_list()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 val_labels(codebook_data$gender) <- c("male" = 1, "female" = 2)
 val_labels(codebook_data$education) <- c("in high school" = 1,
    "finished high school" = 2,
@@ -53,7 +58,7 @@ val_labels(codebook_data$education) <- c("in high school" = 1,
 			   "college graduate" = 4, 
               "graduate degree" = 5)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 add_likert_labels <- function(x) {
   val_labels(x) <- c("Very Inaccurate" = 1, 
                   "Moderately Inaccurate" = 2, 
@@ -64,60 +69,60 @@ add_likert_labels <- function(x) {
   x
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 likert_items <- dict %>% filter(Big6 != "") %>% pull(variable)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data <- codebook_data %>% mutate_at(likert_items,  add_likert_labels)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data$extraversion <- codebook_data %>% select(E1:E5) %>% aggregate_and_document_scale()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 reversed_items <- dict %>% filter(Keying == -1) %>% pull(variable)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data <- codebook_data %>% 
   rename_at(reversed_items,  add_R)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data <- codebook_data %>% 
 	mutate_at(vars(matches("\\dR$")), reverse_labelled_values)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data$extraversion <- codebook_data %>% select(E1R:E5) %>% aggregate_and_document_scale()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 codebook_data$plasticity <- codebook_data %>% select(E1R:E5, O1:O5R) %>% aggregate_and_document_scale() 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 metadata(codebook_data)$name <- "25 Personality items representing 5 factors"
 metadata(codebook_data)$description <- "25 personality self report items taken from the International Personality Item Pool (ipip.ori.org)[...]"
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 metadata(codebook_data)$identifier <- "https://dx.doi.org/10.17605/OSF.IO/K39BG"
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 metadata(codebook_data)$creator <- "William Revelle"
 metadata(codebook_data)$citation <- "Revelle, W., Wilt, J., & Rosenthal, A. (2010). Individual differences in cognition: New methods for examining the personality-cognition link. In A. Gruszka, G. Matthews, & B. Szymura (Eds.), Handbook of individual differences in cognition: Attention, memory, and executive control (pp. 27–49). New York, NY: Springer."
 metadata(codebook_data)$url <- "https://CRAN.R-project.org/package=psych"
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 metadata(codebook_data)$datePublished <- "2010-01-01"
 metadata(codebook_data)$temporalCoverage <- "Spring 2010" 
 metadata(codebook_data)$spatialCoverage <- "Online" 
 
-## ----eval=FALSE----------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  rio::export(codebook_data, "bfi.rds") # to R data structure file
 
-## ----eval=FALSE----------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  rio::export(codebook_data, "bfi.sav") # to SPSS file
 #  rio::export(codebook_data, "bfi.dta") # to Stata file
 
-## ----echo=FALSE----------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 knitr::opts_chunk$set(echo = FALSE) # don't print codebook code
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (exists("testing")) {
 	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
 	results = data("bfi")
@@ -128,45 +133,45 @@ meta <- metadata(results)
 description <- meta$description
 meta <- recursive_escape(meta)
 
-## ----results='asis'------------------------------------------------------
+## ----results='asis'-----------------------------------------------------------
 if (exists("name", meta)) {
   glue::glue(
     "__Dataset name__: {name}",
     .envir = meta)
 }
 
-## ----results='asis'------------------------------------------------------
+## ----results='asis'-----------------------------------------------------------
 cat(description)
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("temporalCoverage", meta)) {
   glue::glue(
     "- __Temporal Coverage__: {temporalCoverage}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("spatialCoverage", meta)) {
   glue::glue(
     "- __Spatial Coverage__: {spatialCoverage}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("citation", meta)) {
   glue::glue(
     "- __Citation__: {citation}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("url", meta)) {
   glue::glue(
     "- __URL__: [{url}]({url})",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("identifier", meta)) {
   if (stringr::str_detect(meta$identifier, "^doi:")) {
     meta$identifier <- paste0('<a href="https://dx.doi.org/', 
@@ -178,27 +183,27 @@ if (exists("identifier", meta)) {
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("datePublished", meta)) {
   glue::glue(
     "- __Date published__: {datePublished}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
   pander::pander(meta$creator)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 meta <- meta[setdiff(names(meta),
                      c("creator", "datePublished", "identifier",
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
 pander::pander(meta)
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#'
 }
@@ -213,7 +218,7 @@ html_scale_name <- recursive_escape(scale_name)
 names(items) <- recursive_escape(names(items))
 scale_info <- recursive_escape(attributes(scale))
 
-## ----likert_setup--------------------------------------------------------
+## ----likert_setup-------------------------------------------------------------
 old_height <- knitr::opts_chunk$get("fig.height")
 new_height <- length(scale_info$scale_item_names)
 new_height <- ifelse(new_height > 20, 20, new_height)
@@ -222,7 +227,7 @@ new_height <- ifelse(is.na(new_height) | is.nan(new_height),
                      old_height, new_height)
 knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert--------------------------------------------------------------
+## ----likert-------------------------------------------------------------------
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
@@ -231,10 +236,10 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution--------------------------------------------------
+## ----setup_distribution-------------------------------------------------------
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -251,7 +256,7 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent = ''
 }
@@ -264,7 +269,7 @@ if (exists("testing")) {
                                           scaleReliability.ci = TRUE)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 coefs <- x$scaleReliability$output$dat %>% 
   tidyr::gather(index, estimate) %>% 
   dplyr::filter(index != "n.items", index != "n.observations") %>% 
@@ -292,26 +297,26 @@ coefs_with_cis <- coefs %>%
 
 pander::pander(coefs_with_cis)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x$scatterMatrix$output$scatterMatrix)
 x$scatterMatrix$output$scatterMatrix <- no_md()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x)
 
-## ----reliability, results='asis'-----------------------------------------
+## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
   cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
 }
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 for (i in seq_along(names(items))) {
   attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
 }
 escaped_table(codebook_table(items))
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#'
 }
@@ -326,7 +331,7 @@ html_scale_name <- recursive_escape(scale_name)
 names(items) <- recursive_escape(names(items))
 scale_info <- recursive_escape(attributes(scale))
 
-## ----likert_setup--------------------------------------------------------
+## ----likert_setup-------------------------------------------------------------
 old_height <- knitr::opts_chunk$get("fig.height")
 new_height <- length(scale_info$scale_item_names)
 new_height <- ifelse(new_height > 20, 20, new_height)
@@ -335,7 +340,7 @@ new_height <- ifelse(is.na(new_height) | is.nan(new_height),
                      old_height, new_height)
 knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert--------------------------------------------------------------
+## ----likert-------------------------------------------------------------------
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
@@ -344,10 +349,10 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution--------------------------------------------------
+## ----setup_distribution-------------------------------------------------------
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -364,7 +369,7 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent = ''
 }
@@ -377,7 +382,7 @@ if (exists("testing")) {
                                           scaleReliability.ci = TRUE)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 coefs <- x$scaleReliability$output$dat %>% 
   tidyr::gather(index, estimate) %>% 
   dplyr::filter(index != "n.items", index != "n.observations") %>% 
@@ -405,26 +410,26 @@ coefs_with_cis <- coefs %>%
 
 pander::pander(coefs_with_cis)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x$scatterMatrix$output$scatterMatrix)
 x$scatterMatrix$output$scatterMatrix <- no_md()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x)
 
-## ----reliability, results='asis'-----------------------------------------
+## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
   cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
 }
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 for (i in seq_along(names(items))) {
   attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
 }
 escaped_table(codebook_table(items))
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -442,7 +447,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -500,7 +505,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -520,18 +525,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -544,12 +549,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -567,7 +572,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -625,7 +630,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -645,18 +650,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -669,12 +674,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -692,7 +697,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -750,7 +755,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -770,18 +775,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -794,12 +799,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -817,7 +822,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -875,7 +880,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -895,18 +900,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -919,12 +924,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -942,7 +947,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1000,7 +1005,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1020,18 +1025,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1044,12 +1049,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1067,7 +1072,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1125,7 +1130,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1145,18 +1150,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1169,12 +1174,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1192,7 +1197,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1250,7 +1255,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1270,18 +1275,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1294,12 +1299,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1317,7 +1322,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1375,7 +1380,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1395,18 +1400,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1419,12 +1424,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1442,7 +1447,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1500,7 +1505,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1520,18 +1525,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1544,12 +1549,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1567,7 +1572,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1625,7 +1630,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1645,18 +1650,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1669,12 +1674,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1692,7 +1697,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1750,7 +1755,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1770,18 +1775,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1794,12 +1799,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1817,7 +1822,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -1875,7 +1880,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1895,18 +1900,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -1919,12 +1924,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -1942,7 +1947,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2000,7 +2005,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2020,18 +2025,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2044,12 +2049,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -2067,7 +2072,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2125,7 +2130,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2145,18 +2150,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2169,12 +2174,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -2192,7 +2197,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2250,7 +2255,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2270,18 +2275,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2294,12 +2299,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -2317,7 +2322,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2375,7 +2380,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2395,18 +2400,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2419,12 +2424,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -2442,7 +2447,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2500,7 +2505,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2520,18 +2525,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2544,12 +2549,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -2567,7 +2572,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -2625,7 +2630,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2645,18 +2650,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -2669,12 +2674,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack
 }
@@ -2685,7 +2690,7 @@ if (exists("testing")) {
 	md_pattern <- data.frame()
 }
 
-## ----missingness_all_setup-----------------------------------------------
+## ----missingness_all_setup----------------------------------------------------
 if (length(md_pattern)) {
   if (knitr::is_html_output()) {
     rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
@@ -2694,7 +2699,7 @@ if (length(md_pattern)) {
   }
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack
 }
@@ -2710,31 +2715,31 @@ if (exists("testing")) {
 	detailed_scales <- TRUE
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::asis_output(data_info)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::asis_output(survey_overview)
 
-## ----scales--------------------------------------------------------------
+## ----scales-------------------------------------------------------------------
 if (detailed_variables || detailed_scales) {
   knitr::asis_output(paste0(scales_items, sep = "\n\n\n", collapse = "\n\n\n"))
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 missingness_report
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 items
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 jsonld
 
-## ----cb------------------------------------------------------------------
+## ----cb-----------------------------------------------------------------------
 codebook(codebook_data, survey_repetition = "single", indent = "##",
          metadata_table = knit_by_pkgdown, metadata_json = knit_by_pkgdown)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 if (!knit_by_pkgdown) {
   codebook:::escaped_table(codebook_table(codebook_data))
 }

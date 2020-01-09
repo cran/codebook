@@ -1,6 +1,6 @@
-## ----warning=FALSE,message=FALSE-----------------------------------------
+## ----warning=FALSE,message=FALSE----------------------------------------------
 knit_by_pkgdown <- !is.null(knitr::opts_chunk$get("fig.retina"))
-knitr::opts_chunk$set(warning = TRUE, message = TRUE, error = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = TRUE, error = FALSE)
 pander::panderOptions("table.split.table", Inf)
 ggplot2::theme_set(ggplot2::theme_bw())
 
@@ -17,7 +17,7 @@ bfi$age <- rpois(nrow(bfi), 30)
 library(labelled)
 var_label(bfi$age) <- "Alter"
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 metadata(bfi)$name <- "MOCK Big Five Inventory dataset (German metadata demo)"
 metadata(bfi)$description <- "a small mock Big Five Inventory dataset"
 metadata(bfi)$identifier <- "doi:10.5281/zenodo.1326520"
@@ -33,11 +33,11 @@ metadata(bfi)$url <- "https://rubenarslan.github.io/codebook/articles/codebook.h
 metadata(bfi)$temporalCoverage <- "2016" 
 metadata(bfi)$spatialCoverage <- "Goettingen, Germany" 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # We don't want to look at the code in the codebook.
 knitr::opts_chunk$set(warning = TRUE, message = TRUE, echo = FALSE)
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (exists("testing")) {
 	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
 	results = data("bfi")
@@ -48,45 +48,45 @@ meta <- metadata(results)
 description <- meta$description
 meta <- recursive_escape(meta)
 
-## ----results='asis'------------------------------------------------------
+## ----results='asis'-----------------------------------------------------------
 if (exists("name", meta)) {
   glue::glue(
     "__Dataset name__: {name}",
     .envir = meta)
 }
 
-## ----results='asis'------------------------------------------------------
+## ----results='asis'-----------------------------------------------------------
 cat(description)
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("temporalCoverage", meta)) {
   glue::glue(
     "- __Temporal Coverage__: {temporalCoverage}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("spatialCoverage", meta)) {
   glue::glue(
     "- __Spatial Coverage__: {spatialCoverage}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("citation", meta)) {
   glue::glue(
     "- __Citation__: {citation}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("url", meta)) {
   glue::glue(
     "- __URL__: [{url}]({url})",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("identifier", meta)) {
   if (stringr::str_detect(meta$identifier, "^doi:")) {
     meta$identifier <- paste0('<a href="https://dx.doi.org/', 
@@ -98,27 +98,27 @@ if (exists("identifier", meta)) {
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("datePublished", meta)) {
   glue::glue(
     "- __Date published__: {datePublished}",
     .envir = meta)
 }
 
-## ----results='asis', echo = FALSE----------------------------------------
+## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
   pander::pander(meta$creator)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 meta <- meta[setdiff(names(meta),
                      c("creator", "datePublished", "identifier",
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
 pander::pander(meta)
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (exists("testing")) {
 	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
 	results = data.frame()
@@ -126,7 +126,7 @@ if (exists("testing")) {
 	reliabilities = list()
 }
 
-## ----repeated------------------------------------------------------------
+## ----repeated-----------------------------------------------------------------
 if (survey_repetition != "single") {
 	overview = results %>% dplyr::group_by(session) %>% 
 		dplyr::summarise(
@@ -143,16 +143,16 @@ if (survey_repetition != "single") {
 	)
 }
 
-## ----starting_time-------------------------------------------------------
+## ----starting_time------------------------------------------------------------
 ggplot2::qplot(results$created) + ggplot2::scale_x_datetime("Date/time when survey was started")
 
-## ----duration------------------------------------------------------------
+## ----duration-----------------------------------------------------------------
 if (low_vals == 0) {
   warning("Durations below 0 detected.")
 }
 ggplot2::qplot(duration$duration, binwidth = 0.5) + ggplot2::scale_x_continuous(paste("Duration (in minutes), excluding", high_vals, "values above median + 4*MAD"), limits = c(lower_limit, upper_limit))
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#'
 }
@@ -167,7 +167,7 @@ html_scale_name <- recursive_escape(scale_name)
 names(items) <- recursive_escape(names(items))
 scale_info <- recursive_escape(attributes(scale))
 
-## ----likert_setup--------------------------------------------------------
+## ----likert_setup-------------------------------------------------------------
 old_height <- knitr::opts_chunk$get("fig.height")
 new_height <- length(scale_info$scale_item_names)
 new_height <- ifelse(new_height > 20, 20, new_height)
@@ -176,7 +176,7 @@ new_height <- ifelse(is.na(new_height) | is.nan(new_height),
                      old_height, new_height)
 knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert--------------------------------------------------------------
+## ----likert-------------------------------------------------------------------
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
@@ -185,10 +185,10 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution--------------------------------------------------
+## ----setup_distribution-------------------------------------------------------
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -205,7 +205,7 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent = ''
 }
@@ -218,7 +218,7 @@ if (exists("testing")) {
                                           scaleReliability.ci = TRUE)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 coefs <- x$scaleReliability$output$dat %>% 
   tidyr::gather(index, estimate) %>% 
   dplyr::filter(index != "n.items", index != "n.observations") %>% 
@@ -246,26 +246,26 @@ coefs_with_cis <- coefs %>%
 
 pander::pander(coefs_with_cis)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x$scatterMatrix$output$scatterMatrix)
 x$scatterMatrix$output$scatterMatrix <- no_md()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x)
 
-## ----reliability, results='asis'-----------------------------------------
+## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
   cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
 }
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 for (i in seq_along(names(items))) {
   attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
 }
 escaped_table(codebook_table(items))
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#'
 }
@@ -280,7 +280,7 @@ html_scale_name <- recursive_escape(scale_name)
 names(items) <- recursive_escape(names(items))
 scale_info <- recursive_escape(attributes(scale))
 
-## ----likert_setup--------------------------------------------------------
+## ----likert_setup-------------------------------------------------------------
 old_height <- knitr::opts_chunk$get("fig.height")
 new_height <- length(scale_info$scale_item_names)
 new_height <- ifelse(new_height > 20, 20, new_height)
@@ -289,7 +289,7 @@ new_height <- ifelse(is.na(new_height) | is.nan(new_height),
                      old_height, new_height)
 knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert--------------------------------------------------------------
+## ----likert-------------------------------------------------------------------
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
@@ -298,10 +298,10 @@ if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution--------------------------------------------------
+## ----setup_distribution-------------------------------------------------------
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -318,7 +318,7 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent = ''
 }
@@ -331,7 +331,7 @@ if (exists("testing")) {
                                           scaleReliability.ci = TRUE)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 coefs <- x$scaleReliability$output$dat %>% 
   tidyr::gather(index, estimate) %>% 
   dplyr::filter(index != "n.items", index != "n.observations") %>% 
@@ -359,26 +359,26 @@ coefs_with_cis <- coefs %>%
 
 pander::pander(coefs_with_cis)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x$scatterMatrix$output$scatterMatrix)
 x$scatterMatrix$output$scatterMatrix <- no_md()
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 print(x)
 
-## ----reliability, results='asis'-----------------------------------------
+## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
   cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
 }
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 for (i in seq_along(names(items))) {
   attributes(items[[i]]) = recursive_escape(attributes(items[[i]]))
 }
 escaped_table(codebook_table(items))
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack so it can be "spun" (variables included via `r ` have to be available)
 }
@@ -396,7 +396,7 @@ item_label <- ifelse(is.null(item_attributes) || is.null(item_attributes$label),
 item_info <- item_attributes$item
 choices <- item_attributes$labels
 
-## ----setup_missing_values------------------------------------------------
+## ----setup_missing_values-----------------------------------------------------
 show_missing_values <- FALSE
 if (has_labels(item)) {
   missing_values <- item[is.na(haven::zap_missing(item))]
@@ -454,7 +454,7 @@ if ( go_vertical ) {
 
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution--------------------------------------------------------
+## ----distribution-------------------------------------------------------------
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -474,18 +474,18 @@ if (!length(item_nomiss)) {
 }
 knitr::opts_chunk$set(fig.height = old_height)
 
-## ----summary-------------------------------------------------------------
+## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
 escaped_table(codebook_table(df))
 
-## ----missing_values------------------------------------------------------
+## ----missing_values-----------------------------------------------------------
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
 
-## ----item_info-----------------------------------------------------------
+## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
   if (!is.null(choices) && !is.null(item_info$choices) && 
@@ -498,12 +498,12 @@ if (!is.null(item_info)) {
   pander::pander(item_info)
 }
 
-## ----choices-------------------------------------------------------------
+## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
 	pander::pander(as.list(choices))
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack
 }
@@ -514,7 +514,7 @@ if (exists("testing")) {
 	md_pattern <- data.frame()
 }
 
-## ----missingness_all_setup-----------------------------------------------
+## ----missingness_all_setup----------------------------------------------------
 if (length(md_pattern)) {
   if (knitr::is_html_output()) {
     rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
@@ -523,7 +523,7 @@ if (length(md_pattern)) {
   }
 }
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (exists("testing")) {
 	indent = '#' # ugly hack so _regression_summary can be "spun" (variables included via `r ` have to be available)
 	results = data.frame()
@@ -531,7 +531,7 @@ if (exists("testing")) {
 }
 json <- jsonlite::toJSON(jsonld_metadata, pretty = TRUE, auto_unbox = TRUE)
 
-## ----setup,eval=TRUE,echo=FALSE------------------------------------------
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
 	indent <- '#' # ugly hack
 }
@@ -547,30 +547,30 @@ if (exists("testing")) {
 	detailed_scales <- TRUE
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::asis_output(data_info)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::asis_output(survey_overview)
 
-## ----scales--------------------------------------------------------------
+## ----scales-------------------------------------------------------------------
 if (detailed_variables || detailed_scales) {
   knitr::asis_output(paste0(scales_items, sep = "\n\n\n", collapse = "\n\n\n"))
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 missingness_report
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 items
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 jsonld
 
-## ----cb------------------------------------------------------------------
+## ----cb-----------------------------------------------------------------------
 codebook(bfi, metadata_table = knit_by_pkgdown, metadata_json = TRUE)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 if (!knit_by_pkgdown) {
   codebook:::escaped_table(codebook_table(bfi))
 }
