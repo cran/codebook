@@ -8,7 +8,6 @@ knitr::opts_chunk$set(
   echo = TRUE  # show R code
 )
 ggplot2::theme_set(ggplot2::theme_bw())
-pander::panderOptions("table.split.table", Inf)
 
 ## ----include=FALSE, echo=FALSE------------------------------------------------
 knitr::opts_chunk$set(
@@ -193,7 +192,7 @@ if (exists("datePublished", meta)) {
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
-  pander::pander(meta$creator)
+  knitr::kable(tibble::enframe(meta$creator))
 }
 
 ## -----------------------------------------------------------------------------
@@ -201,7 +200,9 @@ meta <- meta[setdiff(names(meta),
                      c("creator", "datePublished", "identifier",
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
-pander::pander(meta)
+if(length(meta)) {
+  knitr::kable(meta)
+}
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
 if (!exists("indent")) {
@@ -225,21 +226,17 @@ new_height <- ifelse(new_height > 20, 20, new_height)
 new_height <- ifelse(new_height < 1, 1, new_height)
 new_height <- ifelse(is.na(new_height) | is.nan(new_height), 
                      old_height, new_height)
-knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert-------------------------------------------------------------------
+## ----likert,fig.height=new_height,fig.cap=paste("Likert plot of scale", html_scale_name, "items")----
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
     graphics::plot(likert_plot)
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution-------------------------------------------------------
+## ----distribution,fig.cap=paste("Distribution of scale", html_scale_name)-----
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
-
-## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -256,58 +253,285 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
-if (!exists("indent")) {
-	indent = ''
-}
-if (exists("testing")) {
-	testDat <- bfi %>% dplyr::select(dplyr::starts_with("BFIK_open_"))
-  x = userfriendlyscience::scaleDiagnosis(testDat, 
-                                          scaleReliability.ci = FALSE)
-	testDat <- bfi %>% dplyr::select(dplyr::starts_with("BFIK_consc_"))
-  x = userfriendlyscience::scaleDiagnosis(testDat, 
-                                          scaleReliability.ci = TRUE)
+## ---- eval=TRUE, results="asis", echo=FALSE-----------------------------------
+
+if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
+	headingLevel <- 0;
 }
 
-## -----------------------------------------------------------------------------
-coefs <- x$scaleReliability$output$dat %>% 
-  tidyr::gather(index, estimate) %>% 
-  dplyr::filter(index != "n.items", index != "n.observations") %>% 
-  dplyr::mutate(index = stringr::str_to_title(
-    stringr::str_replace_all(index,
-      stringr::fixed("."), " ")))
-
-cis <- coefs %>% 
-  dplyr::filter(stringr::str_detect(index, " Ci ")) %>% 
-  tidyr::separate(index, c("index", "hilo"), sep = " Ci ") %>% 
-  tidyr::spread(hilo, estimate)
-if (nrow(cis)) {
-  cis <- cis %>% dplyr::rename(
-    `Lower 95% CI` = .data$Lo, `Upper 95% CI` = .data$Hi
-  )
+if (!is.null(x$scaleName)) {
+  mainHeadingText <-
+    paste0(repStr("#", headingLevel), " Scale diagnosis for ",
+           x$scaleName);
+} else {
+  mainHeadingText <-
+    paste0(repStr("#", headingLevel), " Scale diagnosis");
 }
 
-coefs_with_cis <- coefs %>% 
-  dplyr::filter(!stringr::str_detect(index, " Ci ")) %>% 
-    dplyr::left_join(cis, by = "index") %>% 
-    dplyr::mutate(index = dplyr::if_else(index == "Glb", "Greatest Lower Bound", .data$index)) %>% 
-    dplyr::arrange(!stringr::str_detect(index, "Omega")) %>% 
-    dplyr::select(Index = .data$index, Estimate = .data$estimate)
+if (!exists('digits') || !is.numeric(digits) || (length(digits) != 1)) {
+  if (is.null(x$digits) || !is.numeric(x$digits) || (length(x$digits) != 1)) {
+    digits <- 3;
+  } else {
+    digits <- x$digits;
+  }
+}
 
 
-pander::pander(coefs_with_cis)
+## ----eval=TRUE, echo=FALSE----------------------------------------------------
 
-## -----------------------------------------------------------------------------
-print(x$scatterMatrix$output$scatterMatrix)
-x$scatterMatrix$output$scatterMatrix <- no_md()
+digits <- x$input$digits;
 
-## -----------------------------------------------------------------------------
-print(x)
+if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
+	headingLevel <- 0;
+}
+
+
+## ---- echo=echoPartial, results='asis'----------------------------------------
+
+  if (utils::packageVersion('psych') < '1.5.4') {
+    ufs::cat0("Note: your version of package 'psych' is lower than 1.5.4 (",
+              as.character(utils::packageVersion('psych')), " to be precise). This means that you ",
+              "might see errors from the 'fa' function above this notice. ",
+              "You can safely ignore these.\n\n");
+  }
+
+  ufs::cat0("\n\n",
+            ufs::repStr("#", headingLevel + 1),
+            " Information about this scale",
+            "\n\n");
+  
+  overviewDf <-
+    data.frame(values = c(x$input$dat.name,
+                          ufs::vecTxt(x$input$items),
+                          x$input$n.observations,
+                          x$intermediate$cor.pos,
+                          x$intermediate$cor.total,
+                          round(100*x$intermediate$cor.proPos)),
+               stringsAsFactors = FALSE);
+
+  row.names(overviewDf) <- c("Dataframe:",
+                             "Items:",
+                             "Observations:",
+                             "Positive correlations:",
+                             "Number of correlations:",
+                             "Percentage positive correlations:");
+
+  knitr::kable(overviewDf,
+               row.names=TRUE,
+               col.names="");
+
+  ufs::cat0("\n\n",
+            ufs::repStr("#", headingLevel + 1),
+            " Estimates assuming interval level",
+            "\n\n");
+
+  if (x$input$n.items > 2) {
+    
+    intervalDf <-
+      data.frame(values = c(round(x$output$omega, digits=digits),
+                            round(x$intermediate$omega.psych$omega_h, digits=digits),
+                            ifelse(x$input$omega.psych,
+                                   round(x$output$omega.psych, digits=digits),
+                                   NULL),
+                            round(x$output$glb, digits=digits),
+                            round(x$output$coefficientH, digits=digits),
+                            round(x$output$cronbach.alpha, digits=digits)),
+                 stringsAsFactors = FALSE);
+  
+    row.names(intervalDf) <- c("Omega (total):",
+                               "Omega (hierarchical):",
+                               ifelse(x$input$omega.psych,
+                                      "Revelle's Omega (total):",
+                                      NULL),
+                               "Greatest Lower Bound (GLB):",
+                               "Coefficient H:",
+                               "Coefficient Alpha:");
+  
+    print(knitr::kable(intervalDf,
+                       row.names=TRUE,
+                       col.names=""));
+        
+    if (x$input$ci & !is.null(x$output$alpha.ci)) {
+      
+      ### If confidence intervals were computed AND obtained, print them
+      ufs::cat0("\n\n",
+                ufs::repStr("#", headingLevel + 2),
+                " Confidence intervals",
+                "\n\n");
+      
+      intervalCIDf <-
+        data.frame(values = c(ufs::formatCI(x$output$omega.ci,
+                                            digits = digits),
+                              ufs::formatCI(x$output$alpha.ci,
+                                            digits = digits)),
+                   stringsAsFactors = FALSE);
+
+      row.names(intervalCIDf) <- c("Omega (total):",
+                                   "Coefficient Alpha");
+      
+      print(knitr::kable(intervalCIDf,
+                         row.names=TRUE,
+                         col.names=""));
+      
+    }
+    if (x$input$poly && x$intermediate$maxLevels < 9 && x$intermediate$maxRange < 9) {
+      if (!is.null(x$intermediate$omega.ordinal)) {
+        
+        cat0("\n\n",
+             ufs::repStr("#", headingLevel + 1),
+             " Estimates assuming ordinal level",
+             "\n\n");
+        
+        ordinalDf <-
+          data.frame(values = c(round(x$intermediate$omega.ordinal$est, digits=digits),
+                                round(x$intermediate$omega.ordinal.hierarchical$est, digits=digits),
+                                round(x$intermediate$alpha.ordinal$est, digits=digits)),
+                     stringsAsFactors = FALSE);
+        row.names(ordinalDf) <- c("Ordinal Omega (total):",
+                                  "Ordinal Omega (hierarch.):",
+                                  "Ordinal Coefficient Alpha:");
+          
+        print(knitr::kable(ordinalDf,
+                           row.names=TRUE,
+                           col.names=""));
+        
+        if (x$input$ci & !is.null(x$output$alpha.ordinal.ci)) {
+              
+          ### If confidence intervals were computed AND obtained, print them
+          ufs::cat0("\n\n",
+                    ufs::repStr("#", headingLevel + 2),
+                    " Confidence intervals",
+                    "\n\n");
+          
+          ordinalCIDf <-
+            data.frame(values = c(ufs::formatCI(x$output$omega.ordinal.ci,
+                                                digits = digits),
+                                  ufs::formatCI(x$output$alpha.ordinal.ci,
+                                                digits = digits)),
+                       stringsAsFactors = FALSE);
+          row.names(ordinalCIDf) <- c("Ordinal Omega (total):",
+                                       "Ordinal Coefficient Alpha");
+          
+          print(knitr::kable(ordinalCIDf,
+                             row.names=TRUE,
+                             col.names=""));
+          
+        }
+      } else {
+        ufs::cat0("\n\n(Estimates assuming ordinal level ",
+                  "not computed, as the polychoric ",
+                  "correlation matrix has missing values.)\n\n");
+      }
+    } else if (x$input$poly == TRUE){
+      cat("\n\n(Estimates assuming ordinal level not computed, as ",
+          "at least one item seems to have more than 8 levels; ",
+          "the highest number of distinct levels is ",
+          x$intermediate$maxLevels, " and the highest range is ",
+          x$intermediate$maxRange, ". This last number needs to be ",
+          "lower than 9 for the polychoric function to work. ",
+          "If this is unexpected, you may want to ",
+          "check for outliers.)\n\n", sep="");
+    }
+    if (x$input$omega.psych) {
+      cat(paste0("\n\nNote: the normal point estimate and confidence ",
+                 "interval for omega are based on the procedure suggested by ",
+                 "Dunn, Baguley & Brunsden (2013) using the MBESS function ",
+                 "ci.reliability, whereas the psych package point estimate was ",
+                 "suggested in Revelle & Zinbarg (2008). See the help ",
+                 "('?ufs::scaleStructure') for more information.\n\n"));
+    } else {
+      cat(paste0("\n\nNote: the normal point estimate and confidence ",
+                 "interval for omega are based on the procedure suggested by ",
+                 "Dunn, Baguley & Brunsden (2013). To obtain the (usually ",
+                 "higher) omega point estimate using the procedure ",
+                 "suggested by Revelle & Zinbarg (2008), use ",
+                 "argument 'omega.psych=TRUE'. See the help ('?ufs::scaleStructure') ",
+                 "for more information. Of course, you can also call ",
+                 "the 'psych::omega' function from the psych package directly.\n\n"));
+    }
+  } else if (x$input$n.items == 2) {
+
+    ufs::cat0("\n\n",
+              ufs::repStr("#", headingLevel + 1),
+              " Estimates for two-item measures",
+              "\n\n");
+    
+    dualItemDf <-
+      data.frame(values = c(round(x$output$spearman.brown, digits=digits),
+                            round(x$output$cronbach.alpha, digits=digits),
+                            round(x$intermediate$cor[1, 2], digits=digits)),
+                 stringsAsFactors = FALSE);
+    row.names(dualItemDf) <- c("Spearman Brown coefficient:",
+                               "Coefficient Alpha:",
+                               "Pearson Correlation:");
+      
+    print(knitr::kable(dualItemDf,
+                       row.names=TRUE,
+                       col.names=""));
+
+  }
+
+
+## ----bdb52a389f7ddfe8336c3b3c75d1098b, fig.height=6.2992125984252, fig.width=6.2992125984252, fig.cap='Scatterplot', echo=FALSE, cache=FALSE, message=FALSE, results='asis'----
+  grid::grid.newpage();
+  grid::grid.draw(tmpPlotStorage);
+
+## ---- echo=echoPartial, results='asis'----------------------------------------
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Reliability (internal consistency) estimates",
+     "\n\n");
+
+knitr::knit_print(x$scaleReliability);
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Eigen values",
+     "\n\n");
+
+cat(vecTxt(round(x$eigen$values, 3)));
+
+if (!is.null(x$pca) && !is.null(x$fa)) {
+  
+  cat0("\n\n",
+       repStr("#", headingLevel + 1),
+       " Factor analysis (reproducing only shared variance)",
+       "\n\n");
+  
+  print(knitr::kable(as.data.frame(unclass(x$fa$loadings)), digits=digits));
+  
+  cat0("\n\n",
+       repStr("#", headingLevel + 1),
+       " Component analysis (reproducing full covariance matrix)",
+       "\n\n");
+      
+  print(knitr::kable(as.data.frame(unclass(x$pca$loadings)), digits=digits));
+}
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Item descriptives",
+     "\n\n");
+
+print(knitr::kable(x$describe, digits=digits));
+  
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Scattermatrix",
+     "\n\n");
+
+ufs::knitFig(x$scatterMatrix$output$scatterMatrix,
+             figCaption = "Scatterplot");
+
+cat0("\n\n");
+
 
 ## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
-  cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
+  print(knitr::knit_print(rel, headingLevel = 5))
+  print(knitr::asis_output("\n\n\n"))
 }
 
 ## ----summary------------------------------------------------------------------
@@ -338,21 +562,17 @@ new_height <- ifelse(new_height > 20, 20, new_height)
 new_height <- ifelse(new_height < 1, 1, new_height)
 new_height <- ifelse(is.na(new_height) | is.nan(new_height), 
                      old_height, new_height)
-knitr::opts_chunk$set(fig.height = new_height)
 
-## ----likert-------------------------------------------------------------------
+## ----likert,fig.height=new_height,fig.cap=paste("Likert plot of scale", html_scale_name, "items")----
 if (dplyr::n_distinct(na.omit(unlist(items))) < 12) {
   likert_plot <- likert_from_items(items)
   if (!is.null(likert_plot)) {
     graphics::plot(likert_plot)
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
-## ----setup_distribution-------------------------------------------------------
+## ----distribution,fig.cap=paste("Distribution of scale", html_scale_name)-----
 wrap_at <- knitr::opts_chunk$get("fig.width") * 10
-
-## ----distribution-------------------------------------------------------------
 dist_plot <- plot_labelled(scale, scale_name, wrap_at)
 
 choices <- attributes(items[[1]])$item$choices
@@ -369,58 +589,285 @@ if (length(breaks)) {
 
 dist_plot
 
-## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
-if (!exists("indent")) {
-	indent = ''
-}
-if (exists("testing")) {
-	testDat <- bfi %>% dplyr::select(dplyr::starts_with("BFIK_open_"))
-  x = userfriendlyscience::scaleDiagnosis(testDat, 
-                                          scaleReliability.ci = FALSE)
-	testDat <- bfi %>% dplyr::select(dplyr::starts_with("BFIK_consc_"))
-  x = userfriendlyscience::scaleDiagnosis(testDat, 
-                                          scaleReliability.ci = TRUE)
+## ---- eval=TRUE, results="asis", echo=FALSE-----------------------------------
+
+if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
+	headingLevel <- 0;
 }
 
-## -----------------------------------------------------------------------------
-coefs <- x$scaleReliability$output$dat %>% 
-  tidyr::gather(index, estimate) %>% 
-  dplyr::filter(index != "n.items", index != "n.observations") %>% 
-  dplyr::mutate(index = stringr::str_to_title(
-    stringr::str_replace_all(index,
-      stringr::fixed("."), " ")))
-
-cis <- coefs %>% 
-  dplyr::filter(stringr::str_detect(index, " Ci ")) %>% 
-  tidyr::separate(index, c("index", "hilo"), sep = " Ci ") %>% 
-  tidyr::spread(hilo, estimate)
-if (nrow(cis)) {
-  cis <- cis %>% dplyr::rename(
-    `Lower 95% CI` = .data$Lo, `Upper 95% CI` = .data$Hi
-  )
+if (!is.null(x$scaleName)) {
+  mainHeadingText <-
+    paste0(repStr("#", headingLevel), " Scale diagnosis for ",
+           x$scaleName);
+} else {
+  mainHeadingText <-
+    paste0(repStr("#", headingLevel), " Scale diagnosis");
 }
 
-coefs_with_cis <- coefs %>% 
-  dplyr::filter(!stringr::str_detect(index, " Ci ")) %>% 
-    dplyr::left_join(cis, by = "index") %>% 
-    dplyr::mutate(index = dplyr::if_else(index == "Glb", "Greatest Lower Bound", .data$index)) %>% 
-    dplyr::arrange(!stringr::str_detect(index, "Omega")) %>% 
-    dplyr::select(Index = .data$index, Estimate = .data$estimate)
+if (!exists('digits') || !is.numeric(digits) || (length(digits) != 1)) {
+  if (is.null(x$digits) || !is.numeric(x$digits) || (length(x$digits) != 1)) {
+    digits <- 3;
+  } else {
+    digits <- x$digits;
+  }
+}
 
 
-pander::pander(coefs_with_cis)
+## ----eval=TRUE, echo=FALSE----------------------------------------------------
 
-## -----------------------------------------------------------------------------
-print(x$scatterMatrix$output$scatterMatrix)
-x$scatterMatrix$output$scatterMatrix <- no_md()
+digits <- x$input$digits;
 
-## -----------------------------------------------------------------------------
-print(x)
+if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
+	headingLevel <- 0;
+}
+
+
+## ---- echo=echoPartial, results='asis'----------------------------------------
+
+  if (utils::packageVersion('psych') < '1.5.4') {
+    ufs::cat0("Note: your version of package 'psych' is lower than 1.5.4 (",
+              as.character(utils::packageVersion('psych')), " to be precise). This means that you ",
+              "might see errors from the 'fa' function above this notice. ",
+              "You can safely ignore these.\n\n");
+  }
+
+  ufs::cat0("\n\n",
+            ufs::repStr("#", headingLevel + 1),
+            " Information about this scale",
+            "\n\n");
+  
+  overviewDf <-
+    data.frame(values = c(x$input$dat.name,
+                          ufs::vecTxt(x$input$items),
+                          x$input$n.observations,
+                          x$intermediate$cor.pos,
+                          x$intermediate$cor.total,
+                          round(100*x$intermediate$cor.proPos)),
+               stringsAsFactors = FALSE);
+
+  row.names(overviewDf) <- c("Dataframe:",
+                             "Items:",
+                             "Observations:",
+                             "Positive correlations:",
+                             "Number of correlations:",
+                             "Percentage positive correlations:");
+
+  knitr::kable(overviewDf,
+               row.names=TRUE,
+               col.names="");
+
+  ufs::cat0("\n\n",
+            ufs::repStr("#", headingLevel + 1),
+            " Estimates assuming interval level",
+            "\n\n");
+
+  if (x$input$n.items > 2) {
+    
+    intervalDf <-
+      data.frame(values = c(round(x$output$omega, digits=digits),
+                            round(x$intermediate$omega.psych$omega_h, digits=digits),
+                            ifelse(x$input$omega.psych,
+                                   round(x$output$omega.psych, digits=digits),
+                                   NULL),
+                            round(x$output$glb, digits=digits),
+                            round(x$output$coefficientH, digits=digits),
+                            round(x$output$cronbach.alpha, digits=digits)),
+                 stringsAsFactors = FALSE);
+  
+    row.names(intervalDf) <- c("Omega (total):",
+                               "Omega (hierarchical):",
+                               ifelse(x$input$omega.psych,
+                                      "Revelle's Omega (total):",
+                                      NULL),
+                               "Greatest Lower Bound (GLB):",
+                               "Coefficient H:",
+                               "Coefficient Alpha:");
+  
+    print(knitr::kable(intervalDf,
+                       row.names=TRUE,
+                       col.names=""));
+        
+    if (x$input$ci & !is.null(x$output$alpha.ci)) {
+      
+      ### If confidence intervals were computed AND obtained, print them
+      ufs::cat0("\n\n",
+                ufs::repStr("#", headingLevel + 2),
+                " Confidence intervals",
+                "\n\n");
+      
+      intervalCIDf <-
+        data.frame(values = c(ufs::formatCI(x$output$omega.ci,
+                                            digits = digits),
+                              ufs::formatCI(x$output$alpha.ci,
+                                            digits = digits)),
+                   stringsAsFactors = FALSE);
+
+      row.names(intervalCIDf) <- c("Omega (total):",
+                                   "Coefficient Alpha");
+      
+      print(knitr::kable(intervalCIDf,
+                         row.names=TRUE,
+                         col.names=""));
+      
+    }
+    if (x$input$poly && x$intermediate$maxLevels < 9 && x$intermediate$maxRange < 9) {
+      if (!is.null(x$intermediate$omega.ordinal)) {
+        
+        cat0("\n\n",
+             ufs::repStr("#", headingLevel + 1),
+             " Estimates assuming ordinal level",
+             "\n\n");
+        
+        ordinalDf <-
+          data.frame(values = c(round(x$intermediate$omega.ordinal$est, digits=digits),
+                                round(x$intermediate$omega.ordinal.hierarchical$est, digits=digits),
+                                round(x$intermediate$alpha.ordinal$est, digits=digits)),
+                     stringsAsFactors = FALSE);
+        row.names(ordinalDf) <- c("Ordinal Omega (total):",
+                                  "Ordinal Omega (hierarch.):",
+                                  "Ordinal Coefficient Alpha:");
+          
+        print(knitr::kable(ordinalDf,
+                           row.names=TRUE,
+                           col.names=""));
+        
+        if (x$input$ci & !is.null(x$output$alpha.ordinal.ci)) {
+              
+          ### If confidence intervals were computed AND obtained, print them
+          ufs::cat0("\n\n",
+                    ufs::repStr("#", headingLevel + 2),
+                    " Confidence intervals",
+                    "\n\n");
+          
+          ordinalCIDf <-
+            data.frame(values = c(ufs::formatCI(x$output$omega.ordinal.ci,
+                                                digits = digits),
+                                  ufs::formatCI(x$output$alpha.ordinal.ci,
+                                                digits = digits)),
+                       stringsAsFactors = FALSE);
+          row.names(ordinalCIDf) <- c("Ordinal Omega (total):",
+                                       "Ordinal Coefficient Alpha");
+          
+          print(knitr::kable(ordinalCIDf,
+                             row.names=TRUE,
+                             col.names=""));
+          
+        }
+      } else {
+        ufs::cat0("\n\n(Estimates assuming ordinal level ",
+                  "not computed, as the polychoric ",
+                  "correlation matrix has missing values.)\n\n");
+      }
+    } else if (x$input$poly == TRUE){
+      cat("\n\n(Estimates assuming ordinal level not computed, as ",
+          "at least one item seems to have more than 8 levels; ",
+          "the highest number of distinct levels is ",
+          x$intermediate$maxLevels, " and the highest range is ",
+          x$intermediate$maxRange, ". This last number needs to be ",
+          "lower than 9 for the polychoric function to work. ",
+          "If this is unexpected, you may want to ",
+          "check for outliers.)\n\n", sep="");
+    }
+    if (x$input$omega.psych) {
+      cat(paste0("\n\nNote: the normal point estimate and confidence ",
+                 "interval for omega are based on the procedure suggested by ",
+                 "Dunn, Baguley & Brunsden (2013) using the MBESS function ",
+                 "ci.reliability, whereas the psych package point estimate was ",
+                 "suggested in Revelle & Zinbarg (2008). See the help ",
+                 "('?ufs::scaleStructure') for more information.\n\n"));
+    } else {
+      cat(paste0("\n\nNote: the normal point estimate and confidence ",
+                 "interval for omega are based on the procedure suggested by ",
+                 "Dunn, Baguley & Brunsden (2013). To obtain the (usually ",
+                 "higher) omega point estimate using the procedure ",
+                 "suggested by Revelle & Zinbarg (2008), use ",
+                 "argument 'omega.psych=TRUE'. See the help ('?ufs::scaleStructure') ",
+                 "for more information. Of course, you can also call ",
+                 "the 'psych::omega' function from the psych package directly.\n\n"));
+    }
+  } else if (x$input$n.items == 2) {
+
+    ufs::cat0("\n\n",
+              ufs::repStr("#", headingLevel + 1),
+              " Estimates for two-item measures",
+              "\n\n");
+    
+    dualItemDf <-
+      data.frame(values = c(round(x$output$spearman.brown, digits=digits),
+                            round(x$output$cronbach.alpha, digits=digits),
+                            round(x$intermediate$cor[1, 2], digits=digits)),
+                 stringsAsFactors = FALSE);
+    row.names(dualItemDf) <- c("Spearman Brown coefficient:",
+                               "Coefficient Alpha:",
+                               "Pearson Correlation:");
+      
+    print(knitr::kable(dualItemDf,
+                       row.names=TRUE,
+                       col.names=""));
+
+  }
+
+
+## ----47d572e1df6dd938dcd3c413fc4726bd, fig.height=6.2992125984252, fig.width=6.2992125984252, fig.cap='Scatterplot', echo=FALSE, cache=FALSE, message=FALSE, results='asis'----
+  grid::grid.newpage();
+  grid::grid.draw(tmpPlotStorage);
+
+## ---- echo=echoPartial, results='asis'----------------------------------------
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Reliability (internal consistency) estimates",
+     "\n\n");
+
+knitr::knit_print(x$scaleReliability);
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Eigen values",
+     "\n\n");
+
+cat(vecTxt(round(x$eigen$values, 3)));
+
+if (!is.null(x$pca) && !is.null(x$fa)) {
+  
+  cat0("\n\n",
+       repStr("#", headingLevel + 1),
+       " Factor analysis (reproducing only shared variance)",
+       "\n\n");
+  
+  print(knitr::kable(as.data.frame(unclass(x$fa$loadings)), digits=digits));
+  
+  cat0("\n\n",
+       repStr("#", headingLevel + 1),
+       " Component analysis (reproducing full covariance matrix)",
+       "\n\n");
+      
+  print(knitr::kable(as.data.frame(unclass(x$pca$loadings)), digits=digits));
+}
+
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Item descriptives",
+     "\n\n");
+
+print(knitr::kable(x$describe, digits=digits));
+  
+cat0("\n\n",
+     repStr("#", headingLevel + 1),
+     " Scattermatrix",
+     "\n\n");
+
+ufs::knitFig(x$scatterMatrix$output$scatterMatrix,
+             figCaption = "Scatterplot");
+
+cat0("\n\n");
+
 
 ## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
-  cat(knitr::knit_print(rel, indent = paste0(indent, "####")))
+  print(knitr::knit_print(rel, headingLevel = 5))
+  print(knitr::asis_output("\n\n\n"))
 }
 
 ## ----summary------------------------------------------------------------------
@@ -479,7 +926,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -493,19 +940,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -523,15 +968,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -539,19 +987,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -604,7 +1052,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -618,19 +1066,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -648,15 +1094,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -664,19 +1113,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -729,7 +1178,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -743,19 +1192,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -773,15 +1220,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -789,19 +1239,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -854,7 +1304,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -868,19 +1318,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -898,15 +1346,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -914,19 +1365,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -979,7 +1430,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -993,19 +1444,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1023,15 +1472,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1039,19 +1491,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1104,7 +1556,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1118,19 +1570,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1148,15 +1598,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1164,19 +1617,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1229,7 +1682,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1243,19 +1696,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1273,15 +1724,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1289,19 +1743,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1354,7 +1808,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1368,19 +1822,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1398,15 +1850,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1414,19 +1869,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1479,7 +1934,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1493,19 +1948,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1523,15 +1976,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1539,19 +1995,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1604,7 +2060,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1618,19 +2074,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1648,15 +2102,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1664,19 +2121,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1729,7 +2186,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1743,19 +2200,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1773,15 +2228,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1789,19 +2247,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1854,7 +2312,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1868,19 +2326,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -1898,15 +2354,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -1914,19 +2373,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -1979,7 +2438,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -1993,19 +2452,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2023,15 +2480,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2039,19 +2499,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2104,7 +2564,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -2118,19 +2578,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2148,15 +2606,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2164,19 +2625,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2229,7 +2690,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -2243,19 +2704,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2273,15 +2732,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2289,19 +2751,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2354,7 +2816,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -2368,19 +2830,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2398,15 +2858,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2414,19 +2877,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2479,7 +2942,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -2493,19 +2956,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2523,15 +2984,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2539,19 +3003,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2604,7 +3068,7 @@ if (
 }
 attributes(item_nomiss) <- attributes(item)
 
-old_height <- knitr::opts_chunk$get("fig.height")
+fig_height_dist <- knitr::opts_chunk$get("fig.height")
 non_missing_choices <- item_attributes[["labels"]]
 many_labels <- length(non_missing_choices) > 7
 go_vertical <- !is_numeric_or_time_var(item_nomiss) || many_labels
@@ -2618,19 +3082,17 @@ if ( go_vertical ) {
 		non_missing_choices <- unique(item_nomiss)
 		names(non_missing_choices) <- non_missing_choices
 	}
-  choice_multiplier <- old_height/6.5
-	new_height <- 2 + choice_multiplier * length(non_missing_choices)
-	new_height <- ifelse(new_height > 20, 20, new_height)
-	new_height <- ifelse(new_height < 1, 1, new_height)
-	if(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss)) {
-	  new_height <- old_height
-	}
-	knitr::opts_chunk$set(fig.height = new_height)
+  if(!(could_disclose_unique_values(item_nomiss) && is.character(item_nomiss))) {
+    choice_multiplier <- fig_height_dist/6.5
+  	fig_height_dist <- 2 + choice_multiplier * length(non_missing_choices)
+  	fig_height_dist <- ifelse(fig_height_dist > 20, 20, fig_height_dist)
+  	fig_height_dist <- ifelse(fig_height_dist < 1, 1, fig_height_dist)
+  }
 }
 
-wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 
-## ----distribution-------------------------------------------------------------
+## ----distribution,fig.height=fig_height_dist,fig.cap=paste("Distribution of values for", html_item_name)----
+wrap_at <- knitr::opts_chunk$get("fig.width") * 10
 # todo: if there are free-text choices mingled in with the pre-defined ones, don't show
 # todo: show rare items if they are pre-defined
 # todo: bin rare responses into "other category"
@@ -2648,15 +3110,18 @@ if (!length(item_nomiss)) {
 	  cat(dplyr::n_distinct(item_nomiss), " unique, categorical values, so not shown.")
   }
 }
-knitr::opts_chunk$set(fig.height = old_height)
 
 ## ----summary------------------------------------------------------------------
 attributes(item) <- item_attributes
 df = data.frame(item, stringsAsFactors = FALSE)
 names(df) = html_item_name
-escaped_table(codebook_table(df))
+cb_table <- codebook_table(df)
+if(!is.null(choices)) {
+  cb_table$value_labels <- NULL
+}
+escaped_table(cb_table)
 
-## ----missing_values-----------------------------------------------------------
+## ----missing_values,fig.cap=paste("Plot of missing values for", html_item_name)----
 if (show_missing_values) {
   plot_labelled(missing_values, item_name, wrap_at)
 }
@@ -2664,19 +3129,19 @@ if (show_missing_values) {
 ## ----item_info----------------------------------------------------------------
 if (!is.null(item_info)) {
   # don't show choices again, if they're basically same thing as value labels
-  if (!is.null(choices) && !is.null(item_info$choices) && 
-    all(names(na.omit(choices)) == item_info$choices) &&
-    all(na.omit(choices) == names(item_info$choices))) {
-    item_info$choices <- NULL
+  if (is.null(choices)) {
+    choices <- tibble::enframe(item_info$choices)
   }
+  item_info$choices <- NULL
   item_info$label_parsed <- 
     item_info$choice_list <- item_info$study_id <- item_info$id <- NULL
-  pander::pander(item_info)
+  knitr::kable(purrr::flatten_df(item_info), caption = "Item options")
 }
 
 ## ----choices------------------------------------------------------------------
 if (!is.null(choices) && length(choices) && length(choices) < 30) {
-	pander::pander(as.list(choices))
+  try({choices <- tibble::enframe(choices)}, silent = TRUE)
+  knitr::kable(choices, caption = "Response choices")
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
@@ -2692,7 +3157,7 @@ if (exists("testing")) {
 
 ## ----missingness_all_setup----------------------------------------------------
 if (length(md_pattern)) {
-  if (knitr::is_html_output()) {
+  if (knitr::is_html_output() && requireNamespace("rmarkdown", quietly = TRUE)) {
     rmarkdown::paged_table(md_pattern, options = list(rows.print = 10))
   } else {
     knitr::kable(md_pattern)

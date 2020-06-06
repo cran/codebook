@@ -7,7 +7,7 @@
 codebook_survey_overview(results, survey_repetition = "single", indent = "##")
 }
 \arguments{
-\item{results}{a data frame which has the following columns: session, created, modified, expired, ended}
+\item{results}{a data frame which has all the following columns: session, created, modified, expired, ended}
 
 \item{survey_repetition}{defaults to single (other values: repeated_once, repeated_many). controls whether internal consistency, retest reliability or multilevel reliability is computed}
 
@@ -18,10 +18,8 @@ An overview of the number of rows and groups, and of the durations participants
 needed to respond (if those data are available).
 }
 \examples{
-# will generate figures in a figure/ subdirectory
-old_base_dir <- knitr::opts_knit$get("base.dir")
-knitr::opts_knit$set(base.dir = tempdir())
-on.exit(knitr::opts_knit$set(base.dir = old_base_dir))
+\dontrun{
 data("bfi")
 codebook_survey_overview(bfi)
+}
 }
