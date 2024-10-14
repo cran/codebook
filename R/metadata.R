@@ -136,7 +136,7 @@ aggregate_and_document_scale <- function(items, fun = rowMeans, stem = NULL) {
   }
 
   attributes(new_scale)$label <- paste(ncol(items), stem, "items aggregated by",
-                                       deparse(substitute(fun)))
+                                       deparse(substitute(fun)), collapse = "\n")
   new_scale
 }
 
@@ -293,7 +293,7 @@ metadata_list <- function(results, only_existing = TRUE) {
   }
 
   if (!exists("@context", metadata)) {
-    metadata[["@context"]] <- "http://schema.org/"
+    metadata[["@context"]] <- "https://schema.org/"
   }
 
   if (!exists("@type", metadata)) {

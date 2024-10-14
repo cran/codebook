@@ -30,7 +30,7 @@ codebook_table <- function(results) {
     setdiff(names(metadata), order)), # include other cols
     c("choice_list"))
 
-  metadata <- dplyr::select(metadata,  !!!cols)
+  metadata <- dplyr::select(metadata, dplyr::all_of(cols))
   metadata <- dplyr::select_if(metadata, not_all_na )
   if (!exists("label", metadata)) {
     metadata$label <- NA_character_
@@ -107,6 +107,7 @@ attribute_summary <- function(var) {
 #' because the underlying data can be numeric or character. This skimmers summarises
 #' both and leaves non-pertinent columns missings.
 #'
+#' @importFrom vctrs vec_data
 #' @param column the column to skim
 #'
 #' @exportS3Method skimr::get_skimmers haven_labelled
@@ -197,44 +198,50 @@ coerce_skimmed_summary_to_character <- function(df) {
   if (exists("POSIXct", df)) {
     df$POSIXct <-
       dplyr::mutate_at(df$POSIXct,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                        as_character)
   }
   if (exists("Date", df)) {
     df$Date <-
       dplyr::mutate_at(df$Date,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                        as_character)
   }
   if (exists("difftime", df)) {
     df$difftime <-
       dplyr::mutate_at(df$difftime,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                        as_character)
   }
   if (exists("ts", df)) {
     df$ts <-
       dplyr::mutate_at(df$ts,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                        as_character)
   }
   if (exists("numeric", df)) {
     df$numeric <-
       dplyr::mutate_at(df$numeric,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                        format_digits)
   }
   if (exists("character", df)) {
     df$character <-
       dplyr::mutate_at(df$character,
-                       dplyr::vars(.data$min, .data$max),
+                       dplyr::vars("min", "max"),
                        as_character)
   }
   if (exists("haven_labelled", df)) {
     df$haven_labelled <-
       dplyr::mutate_at(df$haven_labelled,
-                       dplyr::vars(.data$min, .data$median, .data$max),
+                       dplyr::vars("min", "median", "max"),
                      format_digits)
+  }
+  if (exists("haven_labelled_spss", df)) {
+    df$haven_labelled_spss <-
+      dplyr::mutate_at(df$haven_labelled_spss,
+                       dplyr::vars("min", "median", "max"),
+                       format_digits)
   }
   class(df) <- "list"
   df

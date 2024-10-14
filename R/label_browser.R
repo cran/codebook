@@ -72,12 +72,14 @@ label_browser_static <- function(data = NULL, viewer = rstudioapi::viewer) {
     DT::datatable(labels,
                   caption = paste(df_name, " columns and labels"),
                   filter = 'top',
+                  extensions = 'Buttons',
                   escape = FALSE,
                   rownames = FALSE,
                   options = list(
                     # searching = FALSE,
+                    dom = 'Bfrtip',
                     info = FALSE,
-                    # dom = 't',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
                     paging = FALSE
                     )
                   )
@@ -102,7 +104,7 @@ label_browser <- function(data = NULL, viewer = rstudioapi::viewer) {
 #' data frame in your source code, this will be the dataset shown by default.
 #' If you don't select text, you can pick a dataset from a dropdown.
 #' You can add a keyboard shortcut for this command by following the
-#' [instructions](https://support.rstudio.com/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts)
+#' [instructions](https://support.posit.co/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts-in-the-RStudio-IDE)
 #' by RStudio. How about Cmd+Ctrl+C?
 #'
 #' @param data the dataset to display. If left empty will try to use selected text in RStudio or offer a dropdown

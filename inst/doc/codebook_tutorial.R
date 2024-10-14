@@ -37,7 +37,7 @@ val_labels(codebook_data$C1) <- c("Very Inaccurate" = 1, "Very Accurate" = 6)
 ## -----------------------------------------------------------------------------
 dict <- rio::import("https://osf.io/cs678/download", "csv")
 
-## ---- warning=FALSE, message=FALSE--------------------------------------------
+## ----warning=FALSE, message=FALSE---------------------------------------------
 library(dplyr)
 
 ## -----------------------------------------------------------------------------
@@ -134,9 +134,9 @@ meta <- recursive_escape(meta)
 
 ## ----results='asis'-----------------------------------------------------------
 if (exists("name", meta)) {
-  glue::glue(
+  glue::glue_data(
     "__Dataset name__: {name}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis'-----------------------------------------------------------
@@ -144,30 +144,30 @@ cat(description)
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("temporalCoverage", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Temporal Coverage__: {temporalCoverage}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("spatialCoverage", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Spatial Coverage__: {spatialCoverage}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("citation", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Citation__: {citation}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("url", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __URL__: [{url}]({url})",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
@@ -177,16 +177,16 @@ if (exists("identifier", meta)) {
       stringr::str_match(meta$identifier, "^doi:(.+)")[,2], '">', 
       meta$identifier, '</a>')
   }
-  glue::glue(
+  glue::glue_data(
     "- __Identifier__: {identifier}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("datePublished", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Date published__: {datePublished}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
@@ -253,285 +253,43 @@ if (length(breaks)) {
 
 dist_plot
 
-## ---- eval=TRUE, results="asis", echo=FALSE-----------------------------------
-
-if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
-	headingLevel <- 0;
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
+if (!exists("indent")) {
+	indent = ''
+}
+if (exists("testing")) {
+	example("alpha", "psych")
+  x = a4
 }
 
-if (!is.null(x$scaleName)) {
-  mainHeadingText <-
-    paste0(repStr("#", headingLevel), " Scale diagnosis for ",
-           x$scaleName);
-} else {
-  mainHeadingText <-
-    paste0(repStr("#", headingLevel), " Scale diagnosis");
+## -----------------------------------------------------------------------------
+if (!is.null(x$total$ase)) {
+  knitr::kable(data.frame(lower = x$total$raw_alpha - 1.96 * x$total$ase, 
+             estimate = x$total$raw_alpha, 
+             upper = x$total$raw_alpha + 1.96 * 
+  x$total$ase))
 }
 
-if (!exists('digits') || !is.numeric(digits) || (length(digits) != 1)) {
-  if (is.null(x$digits) || !is.numeric(x$digits) || (length(x$digits) != 1)) {
-    digits <- 3;
-  } else {
-    digits <- x$digits;
-  }
-}
+## -----------------------------------------------------------------------------
+knitr::kable(x$total)
 
+## -----------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
+knitr::kable(x$alpha.drop)
 
-## ----eval=TRUE, echo=FALSE----------------------------------------------------
+## -----------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
+knitr::kable(x$item.stats)
 
-digits <- x$input$digits;
-
-if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
-	headingLevel <- 0;
-}
-
-
-## ---- echo=echoPartial, results='asis'----------------------------------------
-
-  if (utils::packageVersion('psych') < '1.5.4') {
-    ufs::cat0("Note: your version of package 'psych' is lower than 1.5.4 (",
-              as.character(utils::packageVersion('psych')), " to be precise). This means that you ",
-              "might see errors from the 'fa' function above this notice. ",
-              "You can safely ignore these.\n\n");
-  }
-
-  ufs::cat0("\n\n",
-            ufs::repStr("#", headingLevel + 1),
-            " Information about this scale",
-            "\n\n");
-  
-  overviewDf <-
-    data.frame(values = c(x$input$dat.name,
-                          ufs::vecTxt(x$input$items),
-                          x$input$n.observations,
-                          x$intermediate$cor.pos,
-                          x$intermediate$cor.total,
-                          round(100*x$intermediate$cor.proPos)),
-               stringsAsFactors = FALSE);
-
-  row.names(overviewDf) <- c("Dataframe:",
-                             "Items:",
-                             "Observations:",
-                             "Positive correlations:",
-                             "Number of correlations:",
-                             "Percentage positive correlations:");
-
-  knitr::kable(overviewDf,
-               row.names=TRUE,
-               col.names="");
-
-  ufs::cat0("\n\n",
-            ufs::repStr("#", headingLevel + 1),
-            " Estimates assuming interval level",
-            "\n\n");
-
-  if (x$input$n.items > 2) {
-    
-    intervalDf <-
-      data.frame(values = c(round(x$output$omega, digits=digits),
-                            round(x$intermediate$omega.psych$omega_h, digits=digits),
-                            ifelse(x$input$omega.psych,
-                                   round(x$output$omega.psych, digits=digits),
-                                   NULL),
-                            round(x$output$glb, digits=digits),
-                            round(x$output$coefficientH, digits=digits),
-                            round(x$output$cronbach.alpha, digits=digits)),
-                 stringsAsFactors = FALSE);
-  
-    row.names(intervalDf) <- c("Omega (total):",
-                               "Omega (hierarchical):",
-                               ifelse(x$input$omega.psych,
-                                      "Revelle's Omega (total):",
-                                      NULL),
-                               "Greatest Lower Bound (GLB):",
-                               "Coefficient H:",
-                               "Coefficient Alpha:");
-  
-    print(knitr::kable(intervalDf,
-                       row.names=TRUE,
-                       col.names=""));
-        
-    if (x$input$ci & !is.null(x$output$alpha.ci)) {
-      
-      ### If confidence intervals were computed AND obtained, print them
-      ufs::cat0("\n\n",
-                ufs::repStr("#", headingLevel + 2),
-                " Confidence intervals",
-                "\n\n");
-      
-      intervalCIDf <-
-        data.frame(values = c(ufs::formatCI(x$output$omega.ci,
-                                            digits = digits),
-                              ufs::formatCI(x$output$alpha.ci,
-                                            digits = digits)),
-                   stringsAsFactors = FALSE);
-
-      row.names(intervalCIDf) <- c("Omega (total):",
-                                   "Coefficient Alpha");
-      
-      print(knitr::kable(intervalCIDf,
-                         row.names=TRUE,
-                         col.names=""));
-      
-    }
-    if (x$input$poly && x$intermediate$maxLevels < 9 && x$intermediate$maxRange < 9) {
-      if (!is.null(x$intermediate$omega.ordinal)) {
-        
-        cat0("\n\n",
-             ufs::repStr("#", headingLevel + 1),
-             " Estimates assuming ordinal level",
-             "\n\n");
-        
-        ordinalDf <-
-          data.frame(values = c(round(x$intermediate$omega.ordinal$est, digits=digits),
-                                round(x$intermediate$omega.ordinal.hierarchical$est, digits=digits),
-                                round(x$intermediate$alpha.ordinal$est, digits=digits)),
-                     stringsAsFactors = FALSE);
-        row.names(ordinalDf) <- c("Ordinal Omega (total):",
-                                  "Ordinal Omega (hierarch.):",
-                                  "Ordinal Coefficient Alpha:");
-          
-        print(knitr::kable(ordinalDf,
-                           row.names=TRUE,
-                           col.names=""));
-        
-        if (x$input$ci & !is.null(x$output$alpha.ordinal.ci)) {
-              
-          ### If confidence intervals were computed AND obtained, print them
-          ufs::cat0("\n\n",
-                    ufs::repStr("#", headingLevel + 2),
-                    " Confidence intervals",
-                    "\n\n");
-          
-          ordinalCIDf <-
-            data.frame(values = c(ufs::formatCI(x$output$omega.ordinal.ci,
-                                                digits = digits),
-                                  ufs::formatCI(x$output$alpha.ordinal.ci,
-                                                digits = digits)),
-                       stringsAsFactors = FALSE);
-          row.names(ordinalCIDf) <- c("Ordinal Omega (total):",
-                                       "Ordinal Coefficient Alpha");
-          
-          print(knitr::kable(ordinalCIDf,
-                             row.names=TRUE,
-                             col.names=""));
-          
-        }
-      } else {
-        ufs::cat0("\n\n(Estimates assuming ordinal level ",
-                  "not computed, as the polychoric ",
-                  "correlation matrix has missing values.)\n\n");
-      }
-    } else if (x$input$poly == TRUE){
-      cat("\n\n(Estimates assuming ordinal level not computed, as ",
-          "at least one item seems to have more than 8 levels; ",
-          "the highest number of distinct levels is ",
-          x$intermediate$maxLevels, " and the highest range is ",
-          x$intermediate$maxRange, ". This last number needs to be ",
-          "lower than 9 for the polychoric function to work. ",
-          "If this is unexpected, you may want to ",
-          "check for outliers.)\n\n", sep="");
-    }
-    if (x$input$omega.psych) {
-      cat(paste0("\n\nNote: the normal point estimate and confidence ",
-                 "interval for omega are based on the procedure suggested by ",
-                 "Dunn, Baguley & Brunsden (2013) using the MBESS function ",
-                 "ci.reliability, whereas the psych package point estimate was ",
-                 "suggested in Revelle & Zinbarg (2008). See the help ",
-                 "('?ufs::scaleStructure') for more information.\n\n"));
-    } else {
-      cat(paste0("\n\nNote: the normal point estimate and confidence ",
-                 "interval for omega are based on the procedure suggested by ",
-                 "Dunn, Baguley & Brunsden (2013). To obtain the (usually ",
-                 "higher) omega point estimate using the procedure ",
-                 "suggested by Revelle & Zinbarg (2008), use ",
-                 "argument 'omega.psych=TRUE'. See the help ('?ufs::scaleStructure') ",
-                 "for more information. Of course, you can also call ",
-                 "the 'psych::omega' function from the psych package directly.\n\n"));
-    }
-  } else if (x$input$n.items == 2) {
-
-    ufs::cat0("\n\n",
-              ufs::repStr("#", headingLevel + 1),
-              " Estimates for two-item measures",
-              "\n\n");
-    
-    dualItemDf <-
-      data.frame(values = c(round(x$output$spearman.brown, digits=digits),
-                            round(x$output$cronbach.alpha, digits=digits),
-                            round(x$intermediate$cor[1, 2], digits=digits)),
-                 stringsAsFactors = FALSE);
-    row.names(dualItemDf) <- c("Spearman Brown coefficient:",
-                               "Coefficient Alpha:",
-                               "Pearson Correlation:");
-      
-    print(knitr::kable(dualItemDf,
-                       row.names=TRUE,
-                       col.names=""));
-
-  }
-
-
-## ----bdb52a389f7ddfe8336c3b3c75d1098b, fig.height=6.2992125984252, fig.width=6.2992125984252, fig.cap='Scatterplot', echo=FALSE, cache=FALSE, message=FALSE, results='asis'----
-  grid::grid.newpage();
-  grid::grid.draw(tmpPlotStorage);
-
-## ---- echo=echoPartial, results='asis'----------------------------------------
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Reliability (internal consistency) estimates",
-     "\n\n");
-
-knitr::knit_print(x$scaleReliability);
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Eigen values",
-     "\n\n");
-
-cat(vecTxt(round(x$eigen$values, 3)));
-
-if (!is.null(x$pca) && !is.null(x$fa)) {
-  
-  cat0("\n\n",
-       repStr("#", headingLevel + 1),
-       " Factor analysis (reproducing only shared variance)",
-       "\n\n");
-  
-  print(knitr::kable(as.data.frame(unclass(x$fa$loadings)), digits=digits));
-  
-  cat0("\n\n",
-       repStr("#", headingLevel + 1),
-       " Component analysis (reproducing full covariance matrix)",
-       "\n\n");
-      
-  print(knitr::kable(as.data.frame(unclass(x$pca$loadings)), digits=digits));
-}
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Item descriptives",
-     "\n\n");
-
-print(knitr::kable(x$describe, digits=digits));
-  
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Scattermatrix",
-     "\n\n");
-
-ufs::knitFig(x$scatterMatrix$output$scatterMatrix,
-             figCaption = "Scatterplot");
-
-cat0("\n\n");
-
+## -----------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
+knitr::kable(x$response.freq)
 
 ## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
-  print(knitr::knit_print(rel, headingLevel = 5))
-  print(knitr::asis_output("\n\n\n"))
+  suppressMessages(rel_output <- knitr::knit_print(rel))
+  cat(rel_output)
 }
 
 ## ----summary------------------------------------------------------------------
@@ -589,285 +347,43 @@ if (length(breaks)) {
 
 dist_plot
 
-## ---- eval=TRUE, results="asis", echo=FALSE-----------------------------------
-
-if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
-	headingLevel <- 0;
+## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
+if (!exists("indent")) {
+	indent = ''
+}
+if (exists("testing")) {
+	example("alpha", "psych")
+  x = a4
 }
 
-if (!is.null(x$scaleName)) {
-  mainHeadingText <-
-    paste0(repStr("#", headingLevel), " Scale diagnosis for ",
-           x$scaleName);
-} else {
-  mainHeadingText <-
-    paste0(repStr("#", headingLevel), " Scale diagnosis");
+## -----------------------------------------------------------------------------
+if (!is.null(x$total$ase)) {
+  knitr::kable(data.frame(lower = x$total$raw_alpha - 1.96 * x$total$ase, 
+             estimate = x$total$raw_alpha, 
+             upper = x$total$raw_alpha + 1.96 * 
+  x$total$ase))
 }
 
-if (!exists('digits') || !is.numeric(digits) || (length(digits) != 1)) {
-  if (is.null(x$digits) || !is.numeric(x$digits) || (length(x$digits) != 1)) {
-    digits <- 3;
-  } else {
-    digits <- x$digits;
-  }
-}
+## -----------------------------------------------------------------------------
+knitr::kable(x$total)
 
+## -----------------------------------------------------------------------------
+rownames(x$alpha.drop) <- recursive_escape(rownames(x$alpha.drop))
+knitr::kable(x$alpha.drop)
 
-## ----eval=TRUE, echo=FALSE----------------------------------------------------
+## -----------------------------------------------------------------------------
+rownames(x$item.stats) <- recursive_escape(rownames(x$item.stats))
+knitr::kable(x$item.stats)
 
-digits <- x$input$digits;
-
-if (!exists('headingLevel') || !is.numeric(headingLevel) || (length(headingLevel) != 1)) {
-	headingLevel <- 0;
-}
-
-
-## ---- echo=echoPartial, results='asis'----------------------------------------
-
-  if (utils::packageVersion('psych') < '1.5.4') {
-    ufs::cat0("Note: your version of package 'psych' is lower than 1.5.4 (",
-              as.character(utils::packageVersion('psych')), " to be precise). This means that you ",
-              "might see errors from the 'fa' function above this notice. ",
-              "You can safely ignore these.\n\n");
-  }
-
-  ufs::cat0("\n\n",
-            ufs::repStr("#", headingLevel + 1),
-            " Information about this scale",
-            "\n\n");
-  
-  overviewDf <-
-    data.frame(values = c(x$input$dat.name,
-                          ufs::vecTxt(x$input$items),
-                          x$input$n.observations,
-                          x$intermediate$cor.pos,
-                          x$intermediate$cor.total,
-                          round(100*x$intermediate$cor.proPos)),
-               stringsAsFactors = FALSE);
-
-  row.names(overviewDf) <- c("Dataframe:",
-                             "Items:",
-                             "Observations:",
-                             "Positive correlations:",
-                             "Number of correlations:",
-                             "Percentage positive correlations:");
-
-  knitr::kable(overviewDf,
-               row.names=TRUE,
-               col.names="");
-
-  ufs::cat0("\n\n",
-            ufs::repStr("#", headingLevel + 1),
-            " Estimates assuming interval level",
-            "\n\n");
-
-  if (x$input$n.items > 2) {
-    
-    intervalDf <-
-      data.frame(values = c(round(x$output$omega, digits=digits),
-                            round(x$intermediate$omega.psych$omega_h, digits=digits),
-                            ifelse(x$input$omega.psych,
-                                   round(x$output$omega.psych, digits=digits),
-                                   NULL),
-                            round(x$output$glb, digits=digits),
-                            round(x$output$coefficientH, digits=digits),
-                            round(x$output$cronbach.alpha, digits=digits)),
-                 stringsAsFactors = FALSE);
-  
-    row.names(intervalDf) <- c("Omega (total):",
-                               "Omega (hierarchical):",
-                               ifelse(x$input$omega.psych,
-                                      "Revelle's Omega (total):",
-                                      NULL),
-                               "Greatest Lower Bound (GLB):",
-                               "Coefficient H:",
-                               "Coefficient Alpha:");
-  
-    print(knitr::kable(intervalDf,
-                       row.names=TRUE,
-                       col.names=""));
-        
-    if (x$input$ci & !is.null(x$output$alpha.ci)) {
-      
-      ### If confidence intervals were computed AND obtained, print them
-      ufs::cat0("\n\n",
-                ufs::repStr("#", headingLevel + 2),
-                " Confidence intervals",
-                "\n\n");
-      
-      intervalCIDf <-
-        data.frame(values = c(ufs::formatCI(x$output$omega.ci,
-                                            digits = digits),
-                              ufs::formatCI(x$output$alpha.ci,
-                                            digits = digits)),
-                   stringsAsFactors = FALSE);
-
-      row.names(intervalCIDf) <- c("Omega (total):",
-                                   "Coefficient Alpha");
-      
-      print(knitr::kable(intervalCIDf,
-                         row.names=TRUE,
-                         col.names=""));
-      
-    }
-    if (x$input$poly && x$intermediate$maxLevels < 9 && x$intermediate$maxRange < 9) {
-      if (!is.null(x$intermediate$omega.ordinal)) {
-        
-        cat0("\n\n",
-             ufs::repStr("#", headingLevel + 1),
-             " Estimates assuming ordinal level",
-             "\n\n");
-        
-        ordinalDf <-
-          data.frame(values = c(round(x$intermediate$omega.ordinal$est, digits=digits),
-                                round(x$intermediate$omega.ordinal.hierarchical$est, digits=digits),
-                                round(x$intermediate$alpha.ordinal$est, digits=digits)),
-                     stringsAsFactors = FALSE);
-        row.names(ordinalDf) <- c("Ordinal Omega (total):",
-                                  "Ordinal Omega (hierarch.):",
-                                  "Ordinal Coefficient Alpha:");
-          
-        print(knitr::kable(ordinalDf,
-                           row.names=TRUE,
-                           col.names=""));
-        
-        if (x$input$ci & !is.null(x$output$alpha.ordinal.ci)) {
-              
-          ### If confidence intervals were computed AND obtained, print them
-          ufs::cat0("\n\n",
-                    ufs::repStr("#", headingLevel + 2),
-                    " Confidence intervals",
-                    "\n\n");
-          
-          ordinalCIDf <-
-            data.frame(values = c(ufs::formatCI(x$output$omega.ordinal.ci,
-                                                digits = digits),
-                                  ufs::formatCI(x$output$alpha.ordinal.ci,
-                                                digits = digits)),
-                       stringsAsFactors = FALSE);
-          row.names(ordinalCIDf) <- c("Ordinal Omega (total):",
-                                       "Ordinal Coefficient Alpha");
-          
-          print(knitr::kable(ordinalCIDf,
-                             row.names=TRUE,
-                             col.names=""));
-          
-        }
-      } else {
-        ufs::cat0("\n\n(Estimates assuming ordinal level ",
-                  "not computed, as the polychoric ",
-                  "correlation matrix has missing values.)\n\n");
-      }
-    } else if (x$input$poly == TRUE){
-      cat("\n\n(Estimates assuming ordinal level not computed, as ",
-          "at least one item seems to have more than 8 levels; ",
-          "the highest number of distinct levels is ",
-          x$intermediate$maxLevels, " and the highest range is ",
-          x$intermediate$maxRange, ". This last number needs to be ",
-          "lower than 9 for the polychoric function to work. ",
-          "If this is unexpected, you may want to ",
-          "check for outliers.)\n\n", sep="");
-    }
-    if (x$input$omega.psych) {
-      cat(paste0("\n\nNote: the normal point estimate and confidence ",
-                 "interval for omega are based on the procedure suggested by ",
-                 "Dunn, Baguley & Brunsden (2013) using the MBESS function ",
-                 "ci.reliability, whereas the psych package point estimate was ",
-                 "suggested in Revelle & Zinbarg (2008). See the help ",
-                 "('?ufs::scaleStructure') for more information.\n\n"));
-    } else {
-      cat(paste0("\n\nNote: the normal point estimate and confidence ",
-                 "interval for omega are based on the procedure suggested by ",
-                 "Dunn, Baguley & Brunsden (2013). To obtain the (usually ",
-                 "higher) omega point estimate using the procedure ",
-                 "suggested by Revelle & Zinbarg (2008), use ",
-                 "argument 'omega.psych=TRUE'. See the help ('?ufs::scaleStructure') ",
-                 "for more information. Of course, you can also call ",
-                 "the 'psych::omega' function from the psych package directly.\n\n"));
-    }
-  } else if (x$input$n.items == 2) {
-
-    ufs::cat0("\n\n",
-              ufs::repStr("#", headingLevel + 1),
-              " Estimates for two-item measures",
-              "\n\n");
-    
-    dualItemDf <-
-      data.frame(values = c(round(x$output$spearman.brown, digits=digits),
-                            round(x$output$cronbach.alpha, digits=digits),
-                            round(x$intermediate$cor[1, 2], digits=digits)),
-                 stringsAsFactors = FALSE);
-    row.names(dualItemDf) <- c("Spearman Brown coefficient:",
-                               "Coefficient Alpha:",
-                               "Pearson Correlation:");
-      
-    print(knitr::kable(dualItemDf,
-                       row.names=TRUE,
-                       col.names=""));
-
-  }
-
-
-## ----47d572e1df6dd938dcd3c413fc4726bd, fig.height=6.2992125984252, fig.width=6.2992125984252, fig.cap='Scatterplot', echo=FALSE, cache=FALSE, message=FALSE, results='asis'----
-  grid::grid.newpage();
-  grid::grid.draw(tmpPlotStorage);
-
-## ---- echo=echoPartial, results='asis'----------------------------------------
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Reliability (internal consistency) estimates",
-     "\n\n");
-
-knitr::knit_print(x$scaleReliability);
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Eigen values",
-     "\n\n");
-
-cat(vecTxt(round(x$eigen$values, 3)));
-
-if (!is.null(x$pca) && !is.null(x$fa)) {
-  
-  cat0("\n\n",
-       repStr("#", headingLevel + 1),
-       " Factor analysis (reproducing only shared variance)",
-       "\n\n");
-  
-  print(knitr::kable(as.data.frame(unclass(x$fa$loadings)), digits=digits));
-  
-  cat0("\n\n",
-       repStr("#", headingLevel + 1),
-       " Component analysis (reproducing full covariance matrix)",
-       "\n\n");
-      
-  print(knitr::kable(as.data.frame(unclass(x$pca$loadings)), digits=digits));
-}
-
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Item descriptives",
-     "\n\n");
-
-print(knitr::kable(x$describe, digits=digits));
-  
-cat0("\n\n",
-     repStr("#", headingLevel + 1),
-     " Scattermatrix",
-     "\n\n");
-
-ufs::knitFig(x$scatterMatrix$output$scatterMatrix,
-             figCaption = "Scatterplot");
-
-cat0("\n\n");
-
+## -----------------------------------------------------------------------------
+rownames(x$response.freq) <- recursive_escape(rownames(x$response.freq))
+knitr::kable(x$response.freq)
 
 ## ----reliability, results='asis'----------------------------------------------
 for (i in seq_along(reliabilities)) {
   rel <- reliabilities[[i]]
-  print(knitr::knit_print(rel, headingLevel = 5))
-  print(knitr::asis_output("\n\n\n"))
+  suppressMessages(rel_output <- knitr::knit_print(rel))
+  cat(rel_output)
 }
 
 ## ----summary------------------------------------------------------------------

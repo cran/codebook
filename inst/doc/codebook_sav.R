@@ -71,7 +71,7 @@ metadata(darktriad)$temporalCoverage <- "2015"
 metadata(darktriad)$spatialCoverage <- "Graz, Austria" 
 metadata(darktriad)$distribution = list(
   list("@type" = "DataDownload",
-       "requiresSubscription" = "http://schema.org/True",
+       "requiresSubscription" = "https://schema.org/True",
        "encodingFormat" = "https://www.loc.gov/preservation/digital/formats/fdd/fdd000469.shtml",
        contentUrl = "https://osf.io/j4fcb/download")
 )
@@ -93,9 +93,9 @@ meta <- recursive_escape(meta)
 
 ## ----results='asis'-----------------------------------------------------------
 if (exists("name", meta)) {
-  glue::glue(
+  glue::glue_data(
     "__Dataset name__: {name}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis'-----------------------------------------------------------
@@ -103,30 +103,30 @@ cat(description)
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("temporalCoverage", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Temporal Coverage__: {temporalCoverage}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("spatialCoverage", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Spatial Coverage__: {spatialCoverage}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("citation", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Citation__: {citation}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("url", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __URL__: [{url}]({url})",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
@@ -136,16 +136,16 @@ if (exists("identifier", meta)) {
       stringr::str_match(meta$identifier, "^doi:(.+)")[,2], '">', 
       meta$identifier, '</a>')
   }
-  glue::glue(
+  glue::glue_data(
     "- __Identifier__: {identifier}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("datePublished", meta)) {
-  glue::glue(
+  glue::glue_data(
     "- __Date published__: {datePublished}",
-    .envir = meta)
+    .x = meta)
 }
 
 ## ----results='asis', echo = FALSE---------------------------------------------

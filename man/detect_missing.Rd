@@ -14,7 +14,9 @@ detect_missing(
   missing = c(),
   non_missing = c(),
   vars = names(data),
-  use_labelled_spss = FALSE
+  use_labelled_spss = FALSE,
+  coerce_integer_to_double = FALSE,
+  verbose = FALSE
 )
 
 detect_missings(data, only_labelled_missings = TRUE, ...)
@@ -28,7 +30,9 @@ detect_missing(
   missing = c(),
   non_missing = c(),
   vars = names(data),
-  use_labelled_spss = FALSE
+  use_labelled_spss = FALSE,
+  coerce_integer_to_double = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -50,6 +54,10 @@ detect_missing(
 
 \item{use_labelled_spss}{the labelled_spss class has a few drawbacks. Since R can't store missing values like -1 and 99, we're replacing them with letters unless this option is enabled. If you prefer to keep your -1 etc, turn this on.}
 
+\item{coerce_integer_to_double}{By default, missing values in the columns of integers are not labelled, because it's not technically possible. Let this parameter be \code{TRUE} if you want to automatically coerce integer columns into double to be able to label the missing values.}
+
+\item{verbose}{defaults to FALSE, if set to true, the function lets you know where and how it found potential missing values}
+
 \item{only_labelled_missings}{passed to \code{\link[=detect_missing]{detect_missing()}}}
 
 \item{...}{passed to \code{\link[=detect_missing]{detect_missing()}}}
@@ -65,6 +73,6 @@ Using different settings, you can also easily tag other missing values.
 }
 \section{Functions}{
 \itemize{
-\item \code{detect_missings}: Deprecated version
-}}
+\item \code{detect_missings()}: Deprecated version
 
+}}

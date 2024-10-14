@@ -1,3 +1,4 @@
+#' @importFrom rlang .data
 .data <- rlang::.data
 
 no_md <- function() {
@@ -26,6 +27,7 @@ no_md <- function() {
 #' @param metadata_json whether to include machine-readable metadata as JSON-LD (not visible)
 #' @param indent add # to this to make the headings in the components lower-level. defaults to beginning at h2
 #'
+#' @importFrom graphics plot
 #' @export
 #' @examples
 #' # will generate figures in a temporary directory
@@ -52,7 +54,7 @@ codebook <- function(results, reliabilities = NULL,
       rows_per_user <- nrow(results)/users
 
       dupes <- sum(duplicated(
-        dplyr::select(results, .data$session, .data$created)))
+        dplyr::select(results, "session", "created")))
       if (dupes > 0) {
         stop("There seem to be ", dupes, " duplicated rows in this survey ",
              "(duplicate session-created combinations)")
@@ -83,6 +85,12 @@ codebook <- function(results, reliabilities = NULL,
     cache.path =
       paste0(knitr::opts_chunk$get("cache.path"), "cb_", df_name, "_")
   )
+  on.exit(options(knitr.duplicate.label = old_opt))
+  optc <- knitr::opts_chunk$get(names(options), drop = FALSE)
+  on.exit({
+    for (i in names(options)) if (identical(options[[i]],
+                    knitr::opts_chunk$get(i))) knitr::opts_chunk$set(optc[i])
+  }, add = TRUE)
   knitr::opts_chunk$set(fig.path = options$fig.path,
                         cache.path = options$cache.path)
 
@@ -119,6 +127,7 @@ codebook <- function(results, reliabilities = NULL,
   vars <- names(results)
   items_contained_in_scales <- c()
   `%<-%` <- future::`%<-%`
+  `%seed%` <- future::`%seed%`
 
   if (detailed_scales) {
     for (i in seq_along(vars)) {
@@ -129,7 +138,7 @@ codebook <- function(results, reliabilities = NULL,
         items_contained_in_scales <- c(items_contained_in_scales,
                                        scale_info$scale_item_names, var)
         items <- dplyr::select(results,
-                    !!!scale_info$scale_item_names)
+                    dplyr::all_of(scale_info$scale_item_names))
         scales_items[[var]] %<-% {
           tryCatch({
           codebook_component_scale(
@@ -137,7 +146,7 @@ codebook <- function(results, reliabilities = NULL,
             items = items,
             reliabilities = reliabilities[[var]], indent = indent) },
         error = function(e) stop("Could not summarise scale ", var, ". ", e)) }
-      }
+      } %seed% TRUE
     }
   }
 
@@ -150,10 +159,12 @@ codebook <- function(results, reliabilities = NULL,
       if (var %in% dont_show_these) {
         next # don't do scales again
       } else {
-        scales_items[[var]] %<-% {tryCatch({
+        scales_items[[var]] %<-% {
+          tryCatch({
                         codebook_component_single_item( item = item,
                                 item_name = var, indent = indent ) },
-        error = function(e) stop("Could not summarise item ", var, ". ", e)) }
+        error = function(e) stop("Could not summarise item ", var, ". ", e))
+          }  %seed% TRUE
 
       }
     }
@@ -318,7 +329,8 @@ codebook_missingness <- function(results, indent = "##") {
 #' data("bfi")
 #' metadata_jsonld(bfi)
 metadata_jsonld <- function(results) {
-  jsonld_metadata <- metadata_list(results)
+  jsonld_metadata <- jsonlite::toJSON(metadata_list(results),
+                                      pretty = TRUE, auto_unbox = TRUE)
   rmdpartials::partial(require_file("inst/_metadata_jsonld.Rmd"),
                        name = "metadata_", render_preview = FALSE)
 }
@@ -404,7 +416,7 @@ codebook_component_scale <- function(scale,
   stopifnot( exists("scale_item_names", attributes(scale)))
   stopifnot( attributes(scale)$scale_item_names %in% names(items) )
   items <- dplyr::select(items,
-                         !!!attributes(scale)$scale_item_names)
+                         dplyr::all_of(attributes(scale)$scale_item_names))
 
   safe_name <- safe_name(scale_name)
 
