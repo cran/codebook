@@ -12,10 +12,10 @@ Description: Easily automate the following tasks to describe data frames:
 		Codebooks are also available as tables (CSV, Excel, etc.) and in JSON-LD, so
 		that search engines can find your data and index the metadata.
 		The metadata are also available at your fingertips via RStudio Addins.
-Version: 0.9.5
+Version: 0.9.6
 Authors@R: person("Ruben", "Arslan", email = "ruben.arslan@gmail.com", role = c("aut", "cre"))
 Depends: R (>= 3.2.0)
-Language: en_GB
+Language: en-GB
 URL: https://rubenarslan.github.io/codebook/,
         https://github.com/rubenarslan/codebook
 BugReports: https://github.com/rubenarslan/codebook/issues
@@ -33,8 +33,8 @@ LazyData: true
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2024-10-14 15:49:47 UTC; rubenarslan
+Packaged: 2024-12-23 09:21:34 UTC; rubenarslan
 Author: Ruben Arslan [aut, cre]
 Maintainer: Ruben Arslan <ruben.arslan@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-10-14 16:10:02 UTC
+Date/Publication: 2025-01-08 08:10:08 UTC
