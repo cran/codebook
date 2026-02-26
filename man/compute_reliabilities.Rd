@@ -11,7 +11,8 @@ compute_reliabilities(results, survey_repetition = "single", use_psych = TRUE)
 
 \item{survey_repetition}{defaults to "single". Can also be "repeated_once" or "repeated_many"}
 
-\item{use_psych}{compute reliabilities using the psych package, defaults to TRUE. if false, will use rosetta (computationally more expensive, more dependencies)}
+\item{use_psych}{deprecated. Previously allowed switching to the rosetta
+package, which has been archived. Now only psych is supported.}
 }
 \description{
 If you pass the object resulting from a call to formr_results to this function, it will compute reliabilities for each scale.

@@ -19,7 +19,16 @@ library(codebook)
 codebook_data <- codebook::bfi
 
 ## -----------------------------------------------------------------------------
-codebook_data <- rio::import("https://osf.io/s87kd/download", "csv")
+codebook_data <- tryCatch(
+  rio::import("https://osf.io/download/s87kd", "csv"),
+  error = function(e) {
+    message(
+      "Could not download dataset from https://osf.io/download/s87kd: ",
+      conditionMessage(e), "\nUsing bundled data instead."
+    )
+    codebook::bfi
+  }
+)
 
 ## -----------------------------------------------------------------------------
 attributes(codebook_data$C5)$label <- "Waste my time."
@@ -35,7 +44,17 @@ var_label(codebook_data$C5) <- "Waste my time."
 val_labels(codebook_data$C1) <- c("Very Inaccurate" = 1, "Very Accurate" = 6)
 
 ## -----------------------------------------------------------------------------
-dict <- rio::import("https://osf.io/cs678/download", "csv")
+dict <- tryCatch(
+  rio::import("https://osf.io/download/cs678", "csv"),
+  error = function(e) NULL
+)
+if (is.null(dict)) {
+  message(
+    "Could not download dictionary from https://osf.io/download/cs678\n",
+    "The remote resource may be temporarily unavailable. Skipping remainder of this vignette."
+  )
+  knitr::knit_exit()
+}
 
 ## ----warning=FALSE, message=FALSE---------------------------------------------
 library(dplyr)
@@ -112,11 +131,11 @@ metadata(codebook_data)$temporalCoverage <- "Spring 2010"
 metadata(codebook_data)$spatialCoverage <- "Online" 
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  rio::export(codebook_data, "bfi.rds") # to R data structure file
+# rio::export(codebook_data, "bfi.rds") # to R data structure file
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  rio::export(codebook_data, "bfi.sav") # to SPSS file
-#  rio::export(codebook_data, "bfi.dta") # to Stata file
+# rio::export(codebook_data, "bfi.sav") # to SPSS file
+# rio::export(codebook_data, "bfi.dta") # to Stata file
 
 ## ----echo=FALSE---------------------------------------------------------------
 knitr::opts_chunk$set(echo = FALSE) # don't print codebook code
@@ -192,7 +211,11 @@ if (exists("datePublished", meta)) {
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
-  knitr::kable(tibble::enframe(meta$creator))
+  creator <- lapply(meta$creator, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else x
+  })
+  knitr::kable(tibble::enframe(creator))
 }
 
 ## -----------------------------------------------------------------------------
@@ -201,7 +224,12 @@ meta <- meta[setdiff(names(meta),
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
 if(length(meta)) {
-  knitr::kable(meta)
+  remaining <- lapply(meta, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else if (length(x) > 1) paste(x, collapse = ", ")
+    else as.character(x)
+  })
+  knitr::kable(tibble::enframe(remaining))
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------

@@ -104,7 +104,7 @@ label_browser <- function(data = NULL, viewer = rstudioapi::viewer) {
 #' data frame in your source code, this will be the dataset shown by default.
 #' If you don't select text, you can pick a dataset from a dropdown.
 #' You can add a keyboard shortcut for this command by following the
-#' [instructions](https://support.posit.co/hc/en-us/articles/206382178-Customizing-Keyboard-Shortcuts-in-the-RStudio-IDE)
+#' [instructions](https://docs.posit.co/ide/user/ide/guide/productivity/custom-shortcuts.html)
 #' by RStudio. How about Cmd+Ctrl+C?
 #'
 #' @param data the dataset to display. If left empty will try to use selected text in RStudio or offer a dropdown
@@ -160,7 +160,7 @@ codebook_browser <- function(
                       find_dfs_in_environment())
       ),
       shiny::uiOutput("pending"),
-      shiny::dataTableOutput("output")
+      DT::DTOutput("output")
     )
   )
 
@@ -208,7 +208,7 @@ codebook_browser <- function(
         shiny::h4(style = "color: #AA7732;", data$message)
     })
 
-    output$output <- shiny::renderDataTable({
+    output$output <- DT::renderDT({
       data <- reactiveData()
       data
     },

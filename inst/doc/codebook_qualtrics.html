@@ -12,7 +12,7 @@
 
 <meta name="author" content="Ruben Arslan" />
 
-<meta name="date" content="2024-12-23" />
+<meta name="date" content="2026-02-26" />
 
 <title>Codebook example with Qualtrics dataset</title>
 
@@ -50,8 +50,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -62,7 +63,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -341,7 +342,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Codebook example with Qualtrics
 dataset</h1>
 <h4 class="author">Ruben Arslan</h4>
-<h4 class="date">2024-12-23</h4>
+<h4 class="date">2026-02-26</h4>
 
 
 
@@ -413,10 +414,6 @@ Metadata for search engines
 <li><p><strong>Creator</strong>:</p></li>
 </ul>
 <table>
-<colgroup>
-<col width="16%" />
-<col width="83%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th align="left">name</th>
@@ -442,33 +439,22 @@ Metadata for search engines
 </tr>
 <tr class="odd">
 <td align="left">affiliation</td>
-<td align="left">Organization , MPI Human Development, Berlin</td>
+<td align="left"><span class="citation">@type</span>: Organization,
+name: MPI Human Development, Berlin</td>
 </tr>
 </tbody>
 </table>
-<table class="kable_wrapper">
-<tbody>
-<tr>
-<td>
 <table>
 <thead>
 <tr class="header">
-<th align="left">x</th>
+<th align="left">name</th>
+<th align="left">value</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">ResponseSet</td>
-</tr>
-<tr class="even">
-<td align="left">Q7</td>
-</tr>
-<tr class="odd">
-<td align="left">Q10</td>
-</tr>
-</tbody>
-</table>
-</td>
+<td align="left">keywords</td>
+<td align="left">ResponseSet, Q7, Q10</td>
 </tr>
 </tbody>
 </table>
@@ -493,21 +479,21 @@ Metadata for search engines
 <h4>Summary statistics</h4>
 <table style="width:100%;">
 <colgroup>
-<col width="13%" />
-<col width="13%" />
+<col width="12%" />
 <col width="10%" />
 <col width="10%" />
-<col width="15%" />
+<col width="14%" />
 <col width="9%" />
 <col width="6%" />
 <col width="4%" />
 <col width="4%" />
 <col width="11%" />
+<col width="12%" />
+<col width="6%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">name</th>
-<th align="left">label</th>
 <th align="left">data_type</th>
 <th align="right">n_missing</th>
 <th align="right">complete_rate</th>
@@ -516,11 +502,12 @@ Metadata for search engines
 <th align="left">min</th>
 <th align="left">max</th>
 <th align="right">whitespace</th>
+<th align="left">ResponseSet</th>
+<th align="left">label</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">ResponseSet</td>
 <td align="left">ResponseSet</td>
 <td align="left">character</td>
 <td align="right">0</td>
@@ -530,6 +517,8 @@ Metadata for search engines
 <td align="left">20</td>
 <td align="left">20</td>
 <td align="right">0</td>
+<td align="left">ResponseSet</td>
+<td align="left">NA</td>
 </tr>
 </tbody>
 </table>
@@ -549,10 +538,9 @@ university?</p>
 </div>
 <div id="Q7_summary" class="section level4">
 <h4>Summary statistics</h4>
-<table>
+<table style="width:100%;">
 <colgroup>
 <col width="0%" />
-<col width="15%" />
 <col width="0%" />
 <col width="1%" />
 <col width="1%" />
@@ -561,16 +549,17 @@ university?</p>
 <col width="2%" />
 <col width="1%" />
 <col width="5%" />
+<col width="15%" />
 <col width="1%" />
 <col width="2%" />
 <col width="15%" />
 <col width="3%" />
 <col width="2%" />
+<col width="1%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">name</th>
-<th align="left">label</th>
 <th align="left">type</th>
 <th align="left">data_type</th>
 <th align="left">ordered</th>
@@ -579,18 +568,18 @@ university?</p>
 <th align="right">complete_rate</th>
 <th align="right">n_unique</th>
 <th align="left">top_counts</th>
+<th align="left">Q7</th>
 <th align="left">selector</th>
 <th align="left">subSelector</th>
 <th align="left">questionText</th>
 <th align="left">doesForceResponse</th>
 <th align="left">questionName</th>
+<th align="left">label</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="left">Q7</td>
-<td align="left">How reasonable or unreasonable is the cost of
-courses/tuition at this university?</td>
 <td align="left">MC</td>
 <td align="left">factor</td>
 <td align="left">TRUE</td>
@@ -602,12 +591,15 @@ unreasonable,<br>7. Extremely unreasonable</td>
 <td align="right">1</td>
 <td align="right">2</td>
 <td align="left">Mod: 1, Sli: 1, Ext: 0, Nei: 0</td>
+<td align="left">How reasonable or unreasonable is the cost of
+courses/tuition at this university?</td>
 <td align="left">SAVR</td>
 <td align="left">TX</td>
 <td align="left">How reasonable or unreasonable is the cost of
 courses/tuition at this university?</td>
 <td align="left">FALSE</td>
 <td align="left">Q7</td>
+<td align="left">NA</td>
 </tr>
 </tbody>
 </table>
@@ -714,10 +706,9 @@ center?</p>
 </div>
 <div id="Q10_summary" class="section level4">
 <h4>Summary statistics</h4>
-<table style="width:100%;">
+<table>
 <colgroup>
 <col width="1%" />
-<col width="14%" />
 <col width="1%" />
 <col width="2%" />
 <col width="1%" />
@@ -726,16 +717,17 @@ center?</p>
 <col width="2%" />
 <col width="1%" />
 <col width="6%" />
+<col width="14%" />
 <col width="1%" />
 <col width="2%" />
 <col width="14%" />
 <col width="3%" />
 <col width="2%" />
+<col width="1%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">name</th>
-<th align="left">label</th>
 <th align="left">type</th>
 <th align="left">data_type</th>
 <th align="left">ordered</th>
@@ -744,18 +736,18 @@ center?</p>
 <th align="right">complete_rate</th>
 <th align="right">n_unique</th>
 <th align="left">top_counts</th>
+<th align="left">Q10</th>
 <th align="left">selector</th>
 <th align="left">subSelector</th>
 <th align="left">questionText</th>
 <th align="left">doesForceResponse</th>
 <th align="left">questionName</th>
+<th align="left">label</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="left">Q10</td>
-<td align="left">How helpful or unhelpful is the staff at the on-campus
-health center?</td>
 <td align="left">MC</td>
 <td align="left">factor</td>
 <td align="left">TRUE</td>
@@ -766,12 +758,15 @@ unhelpful,<br>6. Moderately unhelpful,<br>7. Extremely unhelpful</td>
 <td align="right">1</td>
 <td align="right">2</td>
 <td align="left">Mod: 1, Ext: 1, Ext: 0, Sli: 0</td>
+<td align="left">How helpful or unhelpful is the staff at the on-campus
+health center?</td>
 <td align="left">SAVR</td>
 <td align="left">TX</td>
 <td align="left">How helpful or unhelpful is the staff at the on-campus
 health center?</td>
 <td align="left">FALSE</td>
 <td align="left">Q10</td>
+<td align="left">NA</td>
 </tr>
 </tbody>
 </table>

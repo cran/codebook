@@ -126,7 +126,11 @@ if (exists("datePublished", meta)) {
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
-  knitr::kable(tibble::enframe(meta$creator))
+  creator <- lapply(meta$creator, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else x
+  })
+  knitr::kable(tibble::enframe(creator))
 }
 
 ## -----------------------------------------------------------------------------
@@ -135,7 +139,12 @@ meta <- meta[setdiff(names(meta),
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
 if(length(meta)) {
-  knitr::kable(meta)
+  remaining <- lapply(meta, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else if (length(x) > 1) paste(x, collapse = ", ")
+    else as.character(x)
+  })
+  knitr::kable(tibble::enframe(remaining))
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------

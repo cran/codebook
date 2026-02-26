@@ -11,7 +11,8 @@
 #'
 #' @param results a formr results table with attributes set on items and scales
 #' @param survey_repetition defaults to "single". Can also be "repeated_once" or "repeated_many"
-#' @param use_psych compute reliabilities using the psych package, defaults to TRUE. if false, will use rosetta (computationally more expensive, more dependencies)
+#' @param use_psych deprecated. Previously allowed switching to the rosetta
+#'   package, which has been archived. Now only psych is supported.
 #'
 #' @export
 #' @examples
@@ -72,27 +73,18 @@ compute_appropriate_reliability <- function(scale_name, scale_info,
                                             ci = TRUE,
   give_me_alpha_even_if_its_strictly_inferior = TRUE) {
   scale_item_names <- scale_info$scale_item_names
-  if (give_me_alpha_even_if_its_strictly_inferior) {
-    internal_consistency <- function(data, scale_name) {
-      if (!requireNamespace("psych", quietly = TRUE)) {
-        stop("Package \"psych\" needed to compute reliabilites.",
-             call. = FALSE)
-      }
-      psych::alpha(as.data.frame(data),
-                   title = scale_name, check.keys = FALSE)
-    }
-  } else {
-    if (!suppressMessages(
-      requireNamespace("rosetta", quietly = TRUE))) {
-      warning("Package \"rosetta\" needed to compute reliabilites without psych.",
+  if (!give_me_alpha_even_if_its_strictly_inferior) {
+    warning("The rosetta package has been archived from CRAN. ",
+            "Falling back to psych::alpha for reliability computation.",
+            call. = FALSE)
+  }
+  internal_consistency <- function(data, scale_name) {
+    if (!requireNamespace("psych", quietly = TRUE)) {
+      stop("Package \"psych\" needed to compute reliabilites.",
            call. = FALSE)
-      return(NULL)
-    } else {
-      internal_consistency <- function(data, scale_name) {
-        suppressWarnings(
-          rel <- rosetta::reliability(data, itemLevel = TRUE, scatterMatrix = FALSE, ordinal = TRUE))
-      }
     }
+    psych::alpha(as.data.frame(data),
+                 title = scale_name, check.keys = FALSE)
   }
 
   if (survey_repetition == 'single') {
@@ -160,8 +152,6 @@ compute_appropriate_reliability <- function(scale_name, scale_info,
 #' bfi <- bfi %>% dplyr::select(dplyr::starts_with("BFIK_agree"))
 #' reliabilities <- compute_reliabilities(bfi)
 #' pull_reliability(reliabilities$BFIK_agree)
-#' reliabilities <- compute_reliabilities(bfi, use_psych = FALSE)
-#' pull_reliability(reliabilities$BFIK_agree)
 #' }
 pull_reliability <- function(rels) {
   if (length(rels) == 0) {
@@ -171,25 +161,6 @@ pull_reliability <- function(rels) {
     paste0("Cronbach's \u03B1 [95% CI] = ", round(x$total$raw_alpha, 2), " [",
            round(x$total$raw_alpha - 1.96 * x$total$ase, 2), ";",
            round(x$total$raw_alpha + 1.96 * x$total$ase, 2), "]")
-  } else if (length(rels) == 1 && inherits(rels[[1]], "rosettaReliability")) {
-    coefs <- rels[[1]]$scaleStructure$output$dat
-    if (exists("omega.ordinal.ci.lo", coefs)) {
-      paste0("\u03C9<sub>ordinal</sub> [95% CI] = ", round(coefs$omega.ordinal, 2), " [",
-             round(coefs$omega.ordinal.ci.lo, 2), ";",
-             round(coefs$omega.ordinal.ci.hi, 2), "]")
-    } else if (exists("omega.ci.lo", coefs)) {
-      paste0("\u03C9<sub>total</sub> [95% CI] = ", round(coefs$omega, 2), " [",
-             round(coefs$omega.ci.lo, 2), ";",
-             round(coefs$omega.ci.hi, 2), "]")
-    } else if (exists("omega", coefs)) {
-      paste0("\u03C9<sub>total</sub> [95% CI] = ", round(coefs$omega, 2),
-             " [not computed]")
-    } else if (exists("omega.psych.tot", coefs)) {
-      paste0("\u03C9<sub>psych.tot</sub> [95% CI] = ", round(coefs$omega.psych.tot, 2),
-             " [not computed]")
-    } else {
-      "See details tab"
-    }
   } else {
     "See details tab"
   }

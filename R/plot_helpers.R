@@ -10,7 +10,7 @@
 #' @examples
 #' data("bfi", package = "codebook")
 #' open_items <- paste0("BFIK_open_",1:4)
-#' graphics::plot(likert_from_items(bfi[, open_items]))
+#' suppressWarnings(graphics::plot(likert_from_items(bfi[, open_items])))
 likert_from_items <- function(items) {
   if (!methods::is(items, "data.frame") || ncol(items) < 1) {
     stop("The items argument has to be a data frame.")
@@ -180,7 +180,9 @@ plot_labelled <- function(item, item_name = NULL,
       bar_geom +
       ggplot2::scale_x_continuous(x_axis_label, trans = trans)
   } else {
-    dist_plot <- ggplot2::qplot(item) + ggplot2::xlab(x_axis_label)
+    dist_plot <- ggplot2::ggplot(mapping = ggplot2::aes(x = item)) +
+      ggplot2::geom_bar() +
+      ggplot2::xlab(x_axis_label)
   }
 
 

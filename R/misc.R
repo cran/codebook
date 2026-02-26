@@ -169,7 +169,9 @@ modified <- function(survey, variable = "modified") {
 
 
 export_table <- function(df) {
-  if(requireNamespace("DT", quietly = TRUE)) {
+  if (knitr::is_latex_output()) {
+    knitr::kable(df)
+  } else if(requireNamespace("DT", quietly = TRUE)) {
     DT::formatSignif(DT::datatable(df,
                   filter = "top", extensions = 'Buttons',
                   escape = FALSE,
@@ -177,7 +179,8 @@ export_table <- function(df) {
                   options = list(
                     dom = 'Bfrtip',
                     buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-                    pageLength = 200
+                    pageLength = 200,
+                    scrollX = TRUE
                   )), intersect(names(df), c("complete_rate",
                                                  "mean", "sd")))
   } else {

@@ -6,8 +6,17 @@ library(dplyr)
 library(codebook)
 
 ## -----------------------------------------------------------------------------
-darktriad <- rio::import("https://osf.io/j4fcb/download", format = "sav")
-if (!knit_by_pkgdown) {
+darktriad <- tryCatch(
+  rio::import("https://osf.io/download/j4fcb", format = "sav"),
+  error = function(e) NULL
+)
+if (is.null(darktriad)) {
+  message(
+    "Could not download dataset from https://osf.io/download/j4fcb\n",
+    "The remote resource may be temporarily unavailable. Skipping this vignette."
+  )
+  knitr::knit_exit()
+} else if (!knit_by_pkgdown) {
   darktriad <- darktriad %>%
   select(DG, sex, relStat, education, NPI_avg)
 }
@@ -17,7 +26,7 @@ metadata(darktriad)$name <- "How alluring are dark personalities? The Dark Triad
 metadata(darktriad)$description <- paste0("The data to this speed dating study comes in two different formats: Personwise (one record for each individual) and dyadic (pairwise; one record for each date). The respective SPSS files are named \"DarkTriadDate_person.sav\" and \"DarkTriadDate_dyad.sav\".
 
 ### Download link
-[Open Science Framework](https://osf.io/j4fcb/download)
+[Open Science Framework](https://osf.io/download/j4fcb)
 
 ### Personwise datafile 
 The personwise datafile contains individual differences variables and perceiver and target effects according to the social relations model. These are centered marginal means that were calculated according to the formulae provided by Kenny, Kashy, and Cook (2006). These effects are not (!) based on multilevel analyses.
@@ -73,7 +82,7 @@ metadata(darktriad)$distribution = list(
   list("@type" = "DataDownload",
        "requiresSubscription" = "https://schema.org/True",
        "encodingFormat" = "https://www.loc.gov/preservation/digital/formats/fdd/fdd000469.shtml",
-       contentUrl = "https://osf.io/j4fcb/download")
+       contentUrl = "https://osf.io/download/j4fcb")
 )
 
 ## -----------------------------------------------------------------------------
@@ -151,7 +160,11 @@ if (exists("datePublished", meta)) {
 ## ----results='asis', echo = FALSE---------------------------------------------
 if (exists("creator", meta)) {
   cat("- __Creator__:")
-  knitr::kable(tibble::enframe(meta$creator))
+  creator <- lapply(meta$creator, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else x
+  })
+  knitr::kable(tibble::enframe(creator))
 }
 
 ## -----------------------------------------------------------------------------
@@ -160,7 +173,12 @@ meta <- meta[setdiff(names(meta),
                        "url", "citation", "spatialCoverage", 
                        "temporalCoverage", "description", "name"))]
 if(length(meta)) {
-  knitr::kable(meta)
+  remaining <- lapply(meta, function(x) {
+    if (is.list(x)) paste(names(x), x, sep = ": ", collapse = ", ")
+    else if (length(x) > 1) paste(x, collapse = ", ")
+    else as.character(x)
+  })
+  knitr::kable(tibble::enframe(remaining))
 }
 
 ## ----setup,eval=TRUE,echo=FALSE-----------------------------------------------
