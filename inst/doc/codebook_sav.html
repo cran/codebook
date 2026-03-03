@@ -12,7 +12,7 @@
 
 <meta name="author" content="Ruben Arslan" />
 
-<meta name="date" content="2026-02-26" />
+<meta name="date" content="2026-03-02" />
 
 <title>Codebook example with SPSS dataset</title>
 
@@ -1612,7 +1612,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Codebook example with SPSS dataset</h1>
 <h4 class="author">Ruben Arslan</h4>
-<h4 class="date">2026-02-26</h4>
+<h4 class="date">2026-03-02</h4>
 
 
 
@@ -1635,25 +1635,17 @@ missings coded properly. Here, that is not the case, but if you find
 yourself with such a dataset, the <code>detect_missing</code> function
 makes it easy to recognise common ways to specify missing data
 (e.g. negative values, labelled values, 99/999).</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>darktriad <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://osf.io/download/j4fcb&quot;</span>, <span class="at">format =</span> <span class="st">&quot;sav&quot;</span>),</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">is.null</span>(darktriad)) {</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="fu">message</span>(</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="st">&quot;Could not download dataset from https://osf.io/download/j4fcb</span><span class="sc">\n</span><span class="st">&quot;</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="st">&quot;The remote resource may be temporarily unavailable. Skipping this vignette.&quot;</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  )</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">knit_exit</span>()</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>} <span class="cf">else</span> <span class="cf">if</span> (<span class="sc">!</span>knit_by_pkgdown) {</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  darktriad <span class="ot">&lt;-</span> darktriad <span class="sc">%&gt;%</span></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="fu">select</span>(DG, sex, relStat, education, NPI_avg)</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>darktriad_path <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;darktriad.sav&quot;</span>, <span class="at">package =</span> <span class="st">&quot;codebook&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>darktriad <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(darktriad_path, <span class="at">format =</span> <span class="st">&quot;sav&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span>knit_by_pkgdown) {</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  darktriad <span class="ot">&lt;-</span> darktriad <span class="sc">%&gt;%</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="fu">select</span>(DG, sex, relStat, education, NPI_avg)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>}</span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">metadata</span>(darktriad)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="st">&quot;How alluring are dark personalities? The Dark Triad and attractiveness in speed dating&quot;</span></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">metadata</span>(darktriad)<span class="sc">$</span>description <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;The data to this speed dating study comes in two different formats: Personwise (one record for each individual) and dyadic (pairwise; one record for each date). The respective SPSS files are named </span><span class="sc">\&quot;</span><span class="st">DarkTriadDate_person.sav</span><span class="sc">\&quot;</span><span class="st"> and </span><span class="sc">\&quot;</span><span class="st">DarkTriadDate_dyad.sav</span><span class="sc">\&quot;</span><span class="st">.</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="st">### Download link</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="st">[Open Science Framework](https://osf.io/download/j4fcb)</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="st">### Original source</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="st">[Open Science Framework](https://osf.io/j4fcb/)</span></span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="st">### Personwise datafile </span></span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="st">The personwise datafile contains individual differences variables and perceiver and target effects according to the social relations model. These are centered marginal means that were calculated according to the formulae provided by Kenny, Kashy, and Cook (2006). These effects are not (!) based on multilevel analyses.</span></span>
@@ -1726,10 +1718,9 @@ record for each date). The respective SPSS files are named
 “DarkTriadDate_person.sav” and “DarkTriadDate_dyad.sav”.</p>
 </div>
 </div>
-<div id="download-link" class="section level3">
-<h3>Download link</h3>
-<p><a href="https://osf.io/download/j4fcb">Open Science
-Framework</a></p>
+<div id="original-source" class="section level3">
+<h3>Original source</h3>
+<p><a href="https://osf.io/j4fcb/">Open Science Framework</a></p>
 </div>
 <div id="personwise-datafile" class="section level3">
 <h3>Personwise datafile</h3>

@@ -19,16 +19,12 @@ library(codebook)
 codebook_data <- codebook::bfi
 
 ## -----------------------------------------------------------------------------
-codebook_data <- tryCatch(
-  rio::import("https://osf.io/download/s87kd", "csv"),
-  error = function(e) {
-    message(
-      "Could not download dataset from https://osf.io/download/s87kd: ",
-      conditionMessage(e), "\nUsing bundled data instead."
-    )
-    codebook::bfi
-  }
-)
+if (knit_by_pkgdown) {
+  codebook_data <- rio::import("https://osf.io/download/s87kd", "csv")
+} else {
+  codebook_data_path <- system.file("extdata", "bfi_tutorial.rds", package = "codebook")
+  codebook_data <- readRDS(codebook_data_path)
+}
 
 ## -----------------------------------------------------------------------------
 attributes(codebook_data$C5)$label <- "Waste my time."
@@ -44,16 +40,11 @@ var_label(codebook_data$C5) <- "Waste my time."
 val_labels(codebook_data$C1) <- c("Very Inaccurate" = 1, "Very Accurate" = 6)
 
 ## -----------------------------------------------------------------------------
-dict <- tryCatch(
-  rio::import("https://osf.io/download/cs678", "csv"),
-  error = function(e) NULL
-)
-if (is.null(dict)) {
-  message(
-    "Could not download dictionary from https://osf.io/download/cs678\n",
-    "The remote resource may be temporarily unavailable. Skipping remainder of this vignette."
-  )
-  knitr::knit_exit()
+if (knit_by_pkgdown) {
+  dict <- rio::import("https://osf.io/download/cs678", "csv")
+} else {
+  dict_path <- system.file("extdata", "bfi_dict_tutorial.rds", package = "codebook")
+  dict <- readRDS(dict_path)
 }
 
 ## ----warning=FALSE, message=FALSE---------------------------------------------
